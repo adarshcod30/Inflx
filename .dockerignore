@@ -1,0 +1,12 @@
+.venv/
+venv/
+venv_autostream/
+__pycache__/
+*.pyc
+.env
+.git/
+.gitignore
+.pytest_cache/
+tests/
+Dockerfile
+README.md
