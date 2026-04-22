@@ -2,7 +2,7 @@
 ### Enterprise-Grade Conversational Intelligence for AutoStream
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![LangGraph](https://img.shields.io/badge/Orchestration-LangGraph-orange.svg)](https://github.com/langchain-ai/langgraph)
-[![Gemini 1.5 Flash](https://img.shields.io/badge/LLM-Gemini%201.5%20Flash-red.svg)](https://ai.google.dev/)
+[![Gemini 3.1 Flash Lite](https://img.shields.io/badge/LLM-Gemini%203.1%20Flash%20Lite-red.svg)](https://ai.google.dev/)
 
 ---
 
@@ -51,7 +51,7 @@ flowchart TD
 ```
 
 ### Core Components
-1. **Intent Classifier**: Utilizes Gemini 1.5 Flash with structured output to categorize users into `Greeting`, `Product Inquiry`, or `High Intent`.
+1. **Intent Classifier**: Utilizes Gemini 3.1 Flash Lite with structured output to categorize users into `Greeting`, `Product Inquiry`, or `High Intent`.
 2. **RAG-Powered Retrieval**: A BM25-based local retrieval system that searches `data/knowledge_base.md` for pricing and policy information.
 3. **Slot-Filling Lead Capture**: A stateful node that tracks `Name`, `Email`, and `Platform`. It employs a "one step ahead" logic—it won't trigger the API until the profile is 100% complete.
 4. **State Management**: Uses LangGraph's `Annotated` messages and a shared `TypedDict` to maintain context across 10+ conversation turns.
@@ -71,7 +71,7 @@ flowchart TD
 | :--- | :--- |
 | **Language** | Python 3.11 |
 | **Orchestration** | LangGraph |
-| **LLM Engine** | Gemini 1.5 Flash |
+| **LLM Engine** | Gemini 3.1 Flash Lite |
 | **Data Extraction** | Pydantic (Structured Outputs) |
 | **Retriever** | Rank-BM25 |
 | **UI/UX** | Streamlit (Custom CSS) |

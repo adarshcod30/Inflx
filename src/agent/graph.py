@@ -18,7 +18,7 @@ api_key = os.getenv("GOOGLE_API_KEY", "")
 # We use a dummy key if none is provided to allow the graph to be compiled/tested
 # In production, the user must provide a valid GOOGLE_API_KEY
 llm = ChatGoogleGenerativeAI(
-    model="gemini-flash-latest", 
+    model="gemini-3.1-flash-lite-preview", 
     temperature=0.1, 
     google_api_key=os.getenv("GOOGLE_API_KEY", "dummy_key")
 )
@@ -63,7 +63,10 @@ Respond politely to the user's greeting in 1-2 short sentences and ask how you c
         {"role": "system", "content": prompt},
         state["messages"][-1]
     ])
-    return {"messages": [AIMessage(content=response.content)]}
+    content = response.content
+    if isinstance(content, list):
+        content = content[0].get("text", str(content))
+    return {"messages": [AIMessage(content=content)]}
 
 def qa_node(state: AgentState):
     """
@@ -87,7 +90,10 @@ Context from Knowledge Base:
         state["messages"][-1]
     ])
     
-    return {"messages": [AIMessage(content=response.content)]}
+    content = response.content
+    if isinstance(content, list):
+        content = content[0].get("text", str(content))
+    return {"messages": [AIMessage(content=content)]}
 
 def lead_capture_node(state: AgentState):
     """
@@ -131,11 +137,14 @@ Politely and concisely ask them to provide this missing information.
 Mention that this is needed to set up their trial or account."""
         
         response = llm.invoke([{"role": "system", "content": ask_prompt}])
+        content = response.content
+        if isinstance(content, list):
+            content = content[0].get("text", str(content))
         return {
             "lead_name": new_name,
             "lead_email": new_email,
             "lead_platform": new_platform,
-            "messages": [AIMessage(content=response.content)]
+            "messages": [AIMessage(content=content)]
         }
 
 def route_intent(state: AgentState):
