@@ -1,5 +1,5 @@
 langchain==0.1.16
-langchain-google-genai==1.0.2
+langchain-google-genai
 langgraph==0.0.39
 streamlit==1.33.0
 python-dotenv==1.0.1
