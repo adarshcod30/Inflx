@@ -1,0 +1,15 @@
+.venv/
+.venv-autostream/
+venv/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.ipynb_checkpoints/
+.streamlit/config.toml
