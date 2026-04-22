@@ -59,10 +59,8 @@ def greeting_node(state: AgentState):
     prompt = """You are a helpful and energetic assistant for AutoStream, an automated video editing SaaS for content creators.
 Respond politely to the user's greeting in 1-2 short sentences and ask how you can help them with their video editing workflow today."""
     
-    response = llm.invoke([
-        SystemMessage(content=prompt),
-        state["messages"][-1]
-    ])
+    full_prompt = f"{prompt}\n\nUser: {state['messages'][-1].content}\n\nAssistant:"
+    response = llm.invoke(full_prompt)
     
     content = response.content
     if isinstance(content, list) and len(content) > 0:
@@ -89,10 +87,8 @@ Keep your answer clear, persuasive, and friendly.
 Context from Knowledge Base:
 {context}
 """
-    response = llm.invoke([
-        SystemMessage(content=system_prompt),
-        state["messages"][-1]
-    ])
+    full_prompt = f"{system_prompt}\n\nUser: {state['messages'][-1].content}\n\nAssistant:"
+    response = llm.invoke(full_prompt)
     
     content = response.content
     if isinstance(content, list) and len(content) > 0:
@@ -143,7 +139,7 @@ You still need to collect their: {', '.join(missing)}.
 Politely and concisely ask them to provide this missing information. 
 Mention that this is needed to set up their trial or account."""
         
-        response = llm.invoke([SystemMessage(content=ask_prompt)])
+        response = llm.invoke(ask_prompt)
         content = response.content
         if isinstance(content, list) and len(content) > 0:
             content = content[0].get("text", str(content))

@@ -179,6 +179,9 @@ if prompt := st.chat_input("Ask about AutoStream pricing..."):
                     st.toast("Success: Lead data synchronized!", icon="🚀")
                     
             except Exception as e:
+                import traceback
+                print(f"DEBUG ERROR: {str(e)}")
+                traceback.print_exc()
                 st.error(f"An error occurred: {str(e)}")
                 st.info("Ensure GOOGLE_API_KEY is set in your .env file.")
 
