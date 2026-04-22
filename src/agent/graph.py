@@ -15,7 +15,13 @@ dotenv.load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY", "")
 
 # Initialize LLM
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.1)
+# We use a dummy key if none is provided to allow the graph to be compiled/tested
+# In production, the user must provide a valid GOOGLE_API_KEY
+llm = ChatGoogleGenerativeAI(
+    model="gemini-1.5-flash", 
+    temperature=0.1, 
+    google_api_key=os.getenv("GOOGLE_API_KEY", "dummy_key")
+)
 
 def _get_chat_history_text(messages, k=6):
     """Format the last k messages for prompt context."""

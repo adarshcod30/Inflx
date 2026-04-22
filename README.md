@@ -99,11 +99,7 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configuration
-Create a `.env` file from the template and add your API key:
-```bash
-cp .env.example .env
-```
-Edit `.env`:
+Create a `.env` file in the root directory and add your API key:
 ```env
 GOOGLE_API_KEY=your_actual_gemini_api_key
 ```
@@ -143,7 +139,8 @@ To deploy this agent on WhatsApp:
 .
 ├── app.py                  # Premium Streamlit Dashboard
 ├── requirements.txt        # Project Dependencies
-├── .env.example            # Environment Template
+├── README.md               # Documentation
+├── .env                    # API Keys (You need to create this)
 ├── data/
 │   └── knowledge_base.md   # RAG Knowledge Source
 ├── src/
@@ -154,7 +151,8 @@ To deploy this agent on WhatsApp:
 │   └── tools/
 │       ├── retrieval.py    # BM25 RAG Implementation
 │       └── lead_capture.py  # Lead Capture Mock API
-└── verify_agent.py         # CLI Verification Script
+└── tests/
+    └── test_core.py        # Unit Verification Suite
 ```
 
 ---
