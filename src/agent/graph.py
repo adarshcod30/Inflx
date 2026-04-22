@@ -1,7 +1,7 @@
 import os
 from typing import TypedDict, Annotated, Sequence, Optional
 from langgraph.graph import StateGraph, END
-from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 import dotenv
 
@@ -60,13 +60,17 @@ def greeting_node(state: AgentState):
 Respond politely to the user's greeting in 1-2 short sentences and ask how you can help them with their video editing workflow today."""
     
     response = llm.invoke([
-        {"role": "system", "content": prompt},
+        SystemMessage(content=prompt),
         state["messages"][-1]
     ])
+    
     content = response.content
-    if isinstance(content, list):
+    if isinstance(content, list) and len(content) > 0:
         content = content[0].get("text", str(content))
-    return {"messages": [AIMessage(content=content)]}
+    elif not content:
+        content = "I'm sorry, I couldn't generate a response. How else can I help?"
+        
+    return {"messages": [AIMessage(content=str(content))]}
 
 def qa_node(state: AgentState):
     """
@@ -86,14 +90,17 @@ Context from Knowledge Base:
 {context}
 """
     response = llm.invoke([
-        {"role": "system", "content": system_prompt},
+        SystemMessage(content=system_prompt),
         state["messages"][-1]
     ])
     
     content = response.content
-    if isinstance(content, list):
+    if isinstance(content, list) and len(content) > 0:
         content = content[0].get("text", str(content))
-    return {"messages": [AIMessage(content=content)]}
+    elif not content:
+        content = "I'm sorry, I'm having trouble retrieving that information right now."
+        
+    return {"messages": [AIMessage(content=str(content))]}
 
 def lead_capture_node(state: AgentState):
     """
@@ -136,15 +143,18 @@ You still need to collect their: {', '.join(missing)}.
 Politely and concisely ask them to provide this missing information. 
 Mention that this is needed to set up their trial or account."""
         
-        response = llm.invoke([{"role": "system", "content": ask_prompt}])
+        response = llm.invoke([SystemMessage(content=ask_prompt)])
         content = response.content
-        if isinstance(content, list):
+        if isinstance(content, list) and len(content) > 0:
             content = content[0].get("text", str(content))
+        elif not content:
+            content = "Could you please provide your name and email to get started?"
+            
         return {
             "lead_name": new_name,
             "lead_email": new_email,
             "lead_platform": new_platform,
-            "messages": [AIMessage(content=content)]
+            "messages": [AIMessage(content=str(content))]
         }
 
 def route_intent(state: AgentState):
