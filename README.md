@@ -9,8 +9,11 @@
 [![Gemini](https://img.shields.io/badge/Gemini_3.1-Flash_Lite-f59e0b?logo=google&logoColor=white)](https://ai.google.dev)
 [![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-ef4444?logo=streamlit&logoColor=white)](https://streamlit.io)
 [![Tests](https://img.shields.io/badge/Tests-55_Passed-10b981?logo=pytest&logoColor=white)](tests/)
+[![Live App](https://img.shields.io/badge/Live_App-Streamlit_Cloud-FF4B4B?logo=streamlit&logoColor=white)](https://inflxautostream.streamlit.app/)
 
 ---
+
+### 🌐 Live Deployment: [https://inflxautostream.streamlit.app/](https://inflxautostream.streamlit.app/)
 
 *Built for the ServiceHive Inflx Platform — Production-grade conversational AI for SaaS lead generation*
 
@@ -565,6 +568,8 @@ async def whatsapp_webhook(Body: str = Form(), From: str = Form()):
 ---
 
 ## 🎬 Demo
+
+**Test the live application here:** [https://inflxautostream.streamlit.app/](https://inflxautostream.streamlit.app/)
 
 ### Example Conversations
 
