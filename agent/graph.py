@@ -57,26 +57,24 @@ except Exception as exc:
 # System prompt
 # ---------------------------------------------------------------------------
 
-SYSTEM_PROMPT = """You are the AutoStream AI Sales Agent.
+SYSTEM_PROMPT = """You are the AutoStream Premium AI Sales Concierge.
 
-AutoStream is a SaaS product that provides automated video editing tools
-for content creators. Your job is to assist users, answer product questions
-accurately using ONLY the provided knowledge base, and identify users who
-are ready to sign up (high-intent leads).
+AutoStream is a world-class SaaS platform providing AI-driven video automation
+for top-tier content creators. Your role is to provide sophisticated, 
+accurate, and helpful assistance to potential clients.
 
-RULES:
-1. Always be friendly, professional, and concise.
-2. For product questions, use ONLY facts from the knowledge base context provided.
-3. Never invent pricing, features, or policies not in the knowledge base.
-4. When a user expresses interest in signing up or purchasing, classify them as high-intent.
-5. For high-intent users, collect their Name, Email, and Creator Platform one at a time.
-6. Do NOT ask for information the user has already provided.
-7. Validate email format before accepting it.
-8. Only after collecting ALL three fields, confirm the lead capture.
-9. Keep responses under 150 words unless a detailed comparison is requested.
-10. You may answer general questions about video editing or content creation
-    using your own knowledge, but for AutoStream-specific details, use only
-    the knowledge base.
+OPERATIONAL GUIDELINES:
+1. **Persona**: Professional, elite, and highly efficient. Avoid filler words.
+2. **Knowledge**: Use ONLY the provided Ground Truth context for product-specific 
+   queries (pricing, features, limits).
+3. **Integrity**: If a user asks something outside the scope of AutoStream, 
+   politefully pivot back to product value.
+4. **Lead Capture**: For high-intent users, collect 'Full Name', 'Professional Email', 
+   and 'Primary Creator Platform'. One field at a time.
+5. **Formatting**: Use Markdown for clarity. Bold key terms. Use bullet points 
+   for lists.
+6. **Conciseness**: Keep responses under 3 paragraphs unless asked for a 
+   detailed comparison.
 """
 
 
@@ -304,19 +302,17 @@ def respond_node(state: AgentState) -> dict:
         try:
             prompt = f"""{SYSTEM_PROMPT}
 
-KNOWLEDGE BASE CONTEXT:
+KNOWLEDGE BASE CONTEXT (GROUND TRUTH):
 {kb_context}
-
-CURRENT STATE:
-- Intent: {intent}
-- Stage: {state.get('conversation_stage', 'greeting')}
-- Lead Qualified: {state.get('is_qualified', False)}
 
 CONVERSATION HISTORY:
 {history_text}
 
-Generate a helpful, accurate, and friendly response. Use ONLY facts from the
-knowledge base for AutoStream-specific questions. Keep your response concise.
+TASK:
+1. If the user asked a question, answer it concisely using ONLY the provided Knowledge Base context.
+2. If the context does not contain the answer, politely say you don't have that specific information.
+3. If the user is a high-intent lead, guide them through the next steps (Name -> Email -> Platform).
+4. Be professional, friendly, and structured. Use bullet points if listing features.
 
 Response:"""
             response = llm.invoke(prompt)
@@ -324,24 +320,22 @@ Response:"""
         except Exception as exc:
             logger.warning("LLM response generation failed: %s", exc)
 
-    # Deterministic fallback responses
+    # Deterministic fallback responses (Refined)
     if intent == "GREETING":
         response_text = (
-            "Hello! Welcome to AutoStream, your AI-powered video editing platform. "
-            "I can help you with pricing information, plan comparisons, feature details, "
-            "or get you started with a subscription. What would you like to know?"
+            "Hello! I'm the AutoStream Assistant. I can help you with product details, "
+            "pricing, or get you started with a Pro subscription. How can I assist you today?"
         )
     elif intent == "PRODUCT_QUERY":
         response_text = (
-            f"Here's what I found from our knowledge base:\n\n{kb_context}\n\n"
-            "Would you like more details, or are you ready to get started with a plan?"
+            "Based on our knowledge base, here is the relevant information:\n\n"
+            f"{kb_context[:500]}...\n\n"
+            "Would you like more specific details on any of these points?"
         )
     else:
         response_text = (
-            "I'd be happy to help you get started! AutoStream has two plans:\n\n"
-            "- **Basic Plan:** $29/month (10 videos, 720p)\n"
-            "- **Pro Plan:** $79/month (Unlimited videos, 4K, AI captions)\n\n"
-            "Would you like to sign up?"
+            "I'd be happy to help you join AutoStream! We offer a **Basic Plan ($29/mo)** "
+            "and a **Pro Plan ($79/mo)**. Which one interests you most?"
         )
 
     return {"messages": [AIMessage(content=response_text)]}
