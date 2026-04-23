@@ -139,6 +139,16 @@ def intent_node(state: AgentState) -> dict:
     if state.get("is_tool_called"):
         return {"intent": "PRODUCT_QUERY"}
 
+    # Build recent conversation context for better classification
+    recent_context = ""
+    if len(messages) > 1:
+        recent_msgs = messages[-4:]  # Last 4 messages for context
+        context_lines = []
+        for m in recent_msgs:
+            role = "User" if isinstance(m, HumanMessage) else "Assistant"
+            context_lines.append(f"{role}: {m.content[:100]}")
+        recent_context = "\n".join(context_lines)
+
     # LLM-based classification
     if llm is not None:
         try:
@@ -146,11 +156,14 @@ def intent_node(state: AgentState) -> dict:
 Reply with ONLY the category name — no explanation, no punctuation, just the word.
 
 Categories:
-- GREETING: casual hello, hi, greetings, how are you
-- PRODUCT_QUERY: asking about pricing, features, plans, policies, support, or any product question
-- HIGH_INTENT: wants to sign up, purchase, subscribe, try, start, buy, or indicates readiness to commit
+- GREETING: casual hello, hi, greetings, how are you, general acknowledgment like "yes", "sure", "okay" when no specific product intent is shown
+- PRODUCT_QUERY: asking about pricing, features, plans, policies, support, comparisons, or any product-related question
+- HIGH_INTENT: EXPLICITLY wants to sign up, purchase, subscribe, buy, start a plan, or CLEARLY states readiness to commit with specific action words
 
-User message: "{last_msg}"
+IMPORTANT: Only classify as HIGH_INTENT if the user EXPLICITLY mentions signing up, buying, subscribing, or starting. Generic affirmations like "yes", "sure", "okay" are NOT high intent unless they are directly responding to a subscription offer.
+
+{f"Recent conversation context:{chr(10)}{recent_context}{chr(10)}" if recent_context else ""}
+User message to classify: "{last_msg}"
 
 Category:"""
             response = llm.invoke(classification_prompt)
@@ -162,7 +175,6 @@ Category:"""
                     intent = valid
                     break
             else:
-                # LLM returned garbage — fall back
                 intent = classify_intent_from_text(last_msg)
 
             # Update conversation stage
@@ -346,15 +358,28 @@ def respond_node(state: AgentState) -> dict:
             )
             return {"messages": [AIMessage(content=response_text)]}
 
-    # --- Strategy 2: Prompt for next missing field ---
+    # --- Strategy 2: Greetings — always deterministic (NEVER through LLM/RAG) ---
+    if intent == "GREETING":
+        response_text = (
+            "Hello! 👋 I'm the **AutoStream AI Assistant**, powered by Gemini 3.1 Flash-Lite.\n\n"
+            "I can help you with:\n"
+            "- 📋 **Pricing & Plans** — Compare our Basic and Pro plans\n"
+            "- ✨ **Features** — AI captions, 4K export, team collaboration\n"
+            "- 📄 **Policies** — Refunds, support, cancellation\n"
+            "- 🚀 **Getting Started** — Sign up for AutoStream\n\n"
+            "What would you like to know?"
+        )
+        return {"messages": [AIMessage(content=response_text)]}
+
+    # --- Strategy 3: Prompt for next missing field ---
     if intent == "HIGH_INTENT" and not state.get("is_tool_called"):
         missing = state.get("missing_fields", ["name", "email", "platform"])
         if missing:
             prompt_text = next_field_prompt(missing)
             return {"messages": [AIMessage(content=prompt_text)]}
 
-    # --- Strategy 3: LLM-grounded response ---
-    if llm is not None:
+    # --- Strategy 4: LLM-grounded response (PRODUCT_QUERY only) ---
+    if llm is not None and intent == "PRODUCT_QUERY":
         try:
             # Build conversation history for context window
             history_lines = []
@@ -363,7 +388,7 @@ def respond_node(state: AgentState) -> dict:
                 history_lines.append(f"{role}: {msg.content}")
             history_text = "\n".join(history_lines)
 
-            # Ensure we have RAG context for product queries
+            # Ensure we have RAG context
             if not rag_context and messages:
                 rag_context = retrieve_knowledge(messages[-1].content)
 
@@ -379,10 +404,11 @@ CURRENT INTENT: {intent}
 
 INSTRUCTIONS:
 1. Answer the user's question using ONLY the Knowledge Base Context above.
-2. If the context does not contain the answer, say "I don't have that specific information in our knowledge base, but I'd be happy to connect you with our team."
+2. If the context does not contain the answer, say "I don't have that specific information, but I can tell you about our plans, pricing, and policies."
 3. NEVER invent pricing, features, or policy details.
-4. Be professional, friendly, and structured. Use bullet points for lists.
-5. Keep the response concise (under 3 paragraphs).
+4. Always mention BOTH the Basic Plan ($29/mo) and Pro Plan ($79/mo) when discussing pricing.
+5. Be professional, friendly, and structured. Use bullet points for lists.
+6. Keep the response concise (under 3 paragraphs).
 
 Response:"""
             response = llm.invoke(prompt)
@@ -390,14 +416,8 @@ Response:"""
         except Exception as exc:
             logger.warning("LLM response generation failed: %s", exc)
 
-    # --- Strategy 4: Deterministic fallback ---
-    if intent == "GREETING":
-        response_text = (
-            "Hello! 👋 I'm the **AutoStream AI Assistant**, powered by Gemini 3.1 Flash-Lite. "
-            "I can help you explore our pricing plans, compare features, or guide you "
-            "through the sign-up process. What can I do for you today?"
-        )
-    elif intent == "PRODUCT_QUERY":
+    # --- Strategy 5: Deterministic fallback ---
+    if intent == "PRODUCT_QUERY":
         if rag_context and "No relevant information" not in rag_context:
             response_text = (
                 "Based on our knowledge base:\n\n"
@@ -406,9 +426,19 @@ Response:"""
             )
         else:
             response_text = (
-                "I can help with that! AutoStream offers two plans:\n\n"
-                "- **Basic Plan** — $29/mo (10 videos, 720p)\n"
-                "- **Pro Plan** — $79/mo (unlimited videos, 4K, AI captions)\n\n"
+                "Great question! AutoStream offers two plans:\n\n"
+                "**Basic Plan** — **$29/month**\n"
+                "- 10 videos per month\n"
+                "- 720p resolution\n"
+                "- Email support (business hours)\n"
+                "- 10 GB storage\n\n"
+                "**Pro Plan** — **$79/month**\n"
+                "- Unlimited videos\n"
+                "- 4K resolution\n"
+                "- AI captions (multi-language)\n"
+                "- 24/7 priority support\n"
+                "- Unlimited storage\n"
+                "- Custom branding & team collaboration\n\n"
                 "Which plan would you like to know more about?"
             )
     else:

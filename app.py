@@ -375,30 +375,57 @@ and finally a grounded response generator — all sharing a single typed `AgentS
 
     st.markdown("<div class='arch-title' style='margin-top:1.5rem;'>Pipeline Flow Diagram</div>", unsafe_allow_html=True)
     st.markdown("""
-```mermaid
-graph TD
-    A([User Message]) --> B[input_node]
-    B --> C[intent_node<br/>LLM + rule-based]
-    C -->|GREETING| G[respond_node<br/>LLM response generator]
-    C -->|PRODUCT_QUERY| D[rag_node<br/>Knowledge retriever]
-    C -->|HIGH_INTENT| D
-    D -->|PRODUCT_QUERY| G
-    D -->|HIGH_INTENT| E[lead_node<br/>Field extractor]
-    E -->|Fully qualified| F[tool_node<br/>Lead capture API]
-    E -->|Missing fields| G
-    F --> G
-    G --> H([END])
-
-    style A fill:#1c2128,stroke:#2563eb,color:#f8fafc
-    style B fill:#1c2128,stroke:#94a3b8,color:#f8fafc
-    style C fill:#1c2128,stroke:#2563eb,color:#f8fafc
-    style D fill:#1c2128,stroke:#f59e0b,color:#f8fafc
-    style E fill:#1c2128,stroke:#10b981,color:#f8fafc
-    style F fill:#1c2128,stroke:#ef4444,color:#f8fafc
-    style G fill:#1c2128,stroke:#2563eb,color:#f8fafc
-    style H fill:#1c2128,stroke:#2563eb,color:#f8fafc
-```
-    """)
+<div style="background:#161b22;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:2rem;font-family:'Fira Code',monospace;font-size:0.82rem;line-height:1.8;overflow-x:auto;">
+<pre style="color:#f8fafc;margin:0;">
+<span style="color:#2563eb;">┌──────────────┐</span>
+<span style="color:#2563eb;">│</span> <b>User Message</b> <span style="color:#2563eb;">│</span>
+<span style="color:#2563eb;">└──────┬───────┘</span>
+       │
+       ▼
+<span style="color:#94a3b8;">┌──────────────┐</span>
+<span style="color:#94a3b8;">│</span>  input_node  <span style="color:#94a3b8;">│</span>  Preprocessing
+<span style="color:#94a3b8;">└──────┬───────┘</span>
+       │
+       ▼
+<span style="color:#2563eb;">┌──────────────┐</span>
+<span style="color:#2563eb;">│</span> intent_node  <span style="color:#2563eb;">│</span>  LLM + Rule-based Classifier
+<span style="color:#2563eb;">└──┬───┬───┬───┘</span>
+   │   │   │
+   │   │   └─── <span style="color:#10b981;">HIGH_INTENT</span> ──┐
+   │   │                       │
+   │   └─── <span style="color:#f59e0b;">PRODUCT_QUERY</span> ──┐ │
+   │                         │ │
+   │   <span style="color:#94a3b8;">GREETING</span>              ▼ ▼
+   │              <span style="color:#f59e0b;">┌──────────────┐</span>
+   │              <span style="color:#f59e0b;">│</span>   rag_node   <span style="color:#f59e0b;">│</span>  Knowledge Retriever
+   │              <span style="color:#f59e0b;">└──┬───────┬───┘</span>
+   │                 │       │
+   │    <span style="color:#f59e0b;">PRODUCT_QUERY</span>│  <span style="color:#10b981;">HIGH_INTENT</span>
+   │                 │       │
+   │                 │       ▼
+   │                 │  <span style="color:#10b981;">┌──────────────┐</span>
+   │                 │  <span style="color:#10b981;">│</span>  lead_node   <span style="color:#10b981;">│</span>  Field Extractor
+   │                 │  <span style="color:#10b981;">└──┬───────┬───┘</span>
+   │                 │     │       │
+   │                 │  <span style="color:#94a3b8;">Missing</span>  <span style="color:#10b981;">Qualified</span>
+   │                 │     │       │
+   │                 │     │       ▼
+   │                 │     │  <span style="color:#ef4444;">┌──────────────┐</span>
+   │                 │     │  <span style="color:#ef4444;">│</span>  tool_node   <span style="color:#ef4444;">│</span>  Lead Capture API
+   │                 │     │  <span style="color:#ef4444;">└──────┬───────┘</span>
+   │                 │     │         │
+   ▼                 ▼     ▼         ▼
+<span style="color:#2563eb;">┌──────────────────────────────────────┐</span>
+<span style="color:#2563eb;">│</span>          <b>respond_node</b>                <span style="color:#2563eb;">│</span>  Grounded Response Generator
+<span style="color:#2563eb;">└──────────────────┬───────────────────┘</span>
+                   │
+                   ▼
+            <span style="color:#2563eb;">┌─────────┐</span>
+            <span style="color:#2563eb;">│</span>   END   <span style="color:#2563eb;">│</span>
+            <span style="color:#2563eb;">└─────────┘</span>
+</pre>
+</div>
+    """, unsafe_allow_html=True)
 
     st.markdown("<div class='arch-title' style='margin-top:1.5rem;'>Routing Logic</div>", unsafe_allow_html=True)
     import pandas as pd
