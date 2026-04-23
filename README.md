@@ -70,43 +70,34 @@ AutoStream's Social-to-Lead Agentic Workflow is a **multi-node LangGraph state m
 
 ### High-Level Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    PRESENTATION LAYER                            │
-│                  Streamlit Dashboard UI                          │
-│            (Chat / Dashboard / Architecture)                     │
-└──────────────────────┬──────────────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────────────┐
-│                 AGENT ORCHESTRATION LAYER                        │
-│                    LangGraph Pipeline                            │
-│  ┌─────┐  ┌──────┐  ┌─────┐  ┌─────┐  ┌─────┐  ┌───────┐     │
-│  │INPUT│→ │INTENT│→ │ RAG │→ │LEAD │→ │TOOL │→ │RESPOND│→END  │
-│  └─────┘  └──────┘  └─────┘  └─────┘  └─────┘  └───────┘     │
-└──────────────────────┬──────────────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────────────┐
-│                  INTELLIGENCE LAYER                              │
-│         Gemini 3.1 Flash-Lite  +  Intent Classifier             │
-│                  + RAG Retriever                                 │
-└──────────────────────┬──────────────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────────────┐
-│                     STATE LAYER                                  │
-│              AgentState (TypedDict)                              │
-│    messages │ intent │ stage │ lead_* │ rag_context │ flags     │
-└──────────────────────┬──────────────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────────────┐
-│                     TOOL LAYER                                   │
-│              mock_lead_capture() → CRM API                      │
-│         (HubSpot / Salesforce in production)                    │
-└──────────────────────┬──────────────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────────────┐
-│                     DATA LAYER                                   │
-│              knowledge_base.json (Plans, Policies, FAQs)        │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+block-beta
+    columns 1
+    block:presentation["PRESENTATION LAYER"]
+        A["Streamlit Dashboard UI\n(Chat / Dashboard / Architecture)"]
+    end
+    space
+    block:orchestration["AGENT ORCHESTRATION LAYER"]
+        B["INPUT"] --> C["INTENT"] --> D["RAG"] --> E["LEAD"] --> F["TOOL"] --> G["RESPOND"] --> H["END"]
+    end
+    space
+    block:intelligence["INTELLIGENCE LAYER"]
+        I["Gemini 3.1 Flash-Lite + Intent Classifier + RAG Retriever"]
+    end
+    space
+    block:statelayer["STATE LAYER"]
+        J["AgentState TypedDict — messages | intent | stage | lead_* | rag_context | flags"]
+    end
+    space
+    block:toollayer["TOOL LAYER"]
+        K["mock_lead_capture → CRM API (HubSpot / Salesforce)"]
+    end
+    space
+    block:datalayer["DATA LAYER"]
+        L["knowledge_base.json — Plans, Policies, FAQs"]
+    end
+
+    presentation --> orchestration --> intelligence --> statelayer --> toollayer --> datalayer
 ```
 
 ### Layered Architecture
@@ -122,35 +113,26 @@ AutoStream's Social-to-Lead Agentic Workflow is a **multi-node LangGraph state m
 
 ### Component Interaction
 
-```
-                   ┌─────────────────┐
-                   │   Streamlit UI  │
-                   │   (app.py)      │
-                   └────────┬────────┘
-                            │ invoke()
-                            ▼
-               ┌────────────────────────┐
-               │    LangGraph Engine    │
-               │    (agent/graph.py)    │
-               └──┬──┬──┬──┬──┬──┬─────┘
-                  │  │  │  │  │  │
-        ┌─────┘  │  │  │  │  └───────┐
-        ▼        ▼  │  │  ▼          ▼
-   ┌────────┐ ┌────┐│  │┌─────┐ ┌────────┐
-   │intent  │ │rag ││  ││lead │ │respond │
-   │.py     │ │.py ││  ││.py  │ │(graph) │
-   └────────┘ └────┘│  │└─────┘ └────────┘
-                     │  │
-                     ▼  ▼
-               ┌────────────┐  ┌──────────────┐
-               │ tools.py   │  │ state.py     │
-               │ (CRM API)  │  │ (AgentState) │
-               └────────────┘  └──────────────┘
-                                      │
-                               ┌──────▼──────┐
-                               │knowledge    │
-                               │_base.json   │
-                               └─────────────┘
+```mermaid
+graph TD
+    UI["Streamlit UI<br/>(app.py)"] -->|invoke| ENGINE["LangGraph Engine<br/>(agent/graph.py)"]
+    ENGINE --> INTENT["intent.py<br/>Intent Classifier"]
+    ENGINE --> RAG["rag.py<br/>RAG Retriever"]
+    ENGINE --> LEAD["lead.py<br/>Lead Qualifier"]
+    ENGINE --> RESPOND["respond_node<br/>(graph.py)"]
+    ENGINE --> TOOLS["tools.py<br/>CRM API"]
+    ENGINE --> STATE["state.py<br/>AgentState"]
+    RAG --> KB[("knowledge_base.json")]
+
+    style UI fill:#1c2128,stroke:#2563eb,color:#f8fafc
+    style ENGINE fill:#1c2128,stroke:#2563eb,color:#f8fafc
+    style INTENT fill:#1c2128,stroke:#f59e0b,color:#f8fafc
+    style RAG fill:#1c2128,stroke:#f59e0b,color:#f8fafc
+    style LEAD fill:#1c2128,stroke:#10b981,color:#f8fafc
+    style RESPOND fill:#1c2128,stroke:#2563eb,color:#f8fafc
+    style TOOLS fill:#1c2128,stroke:#ef4444,color:#f8fafc
+    style STATE fill:#1c2128,stroke:#94a3b8,color:#f8fafc
+    style KB fill:#1c2128,stroke:#94a3b8,color:#f8fafc
 ```
 
 ---
@@ -159,123 +141,80 @@ AutoStream's Social-to-Lead Agentic Workflow is a **multi-node LangGraph state m
 
 ### Conversation Flow (LangGraph Pipeline)
 
-```
-                    ┌──────────────┐
-                    │ User Message │
-                    └──────┬───────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │  input_node  │  (Preprocessing)
-                    └──────┬───────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │ intent_node  │  (LLM + Rule-based)
-                    └──┬───┬───┬───┘
-                       │   │   │
-          GREETING ◄───┘   │   └──► HIGH_INTENT
-                           │              │
-                    PRODUCT_QUERY          │
-                           │              │
-                           ▼              ▼
-                    ┌──────────────┐
-                    │   rag_node   │  (Knowledge Retriever)
-                    └──┬───────┬───┘
-                       │       │
-              PRODUCT  │       │  HIGH_INTENT
-              _QUERY   │       │
-                       │       ▼
-                       │  ┌──────────────┐
-                       │  │  lead_node   │  (Field Extractor)
-                       │  └──┬───────┬───┘
-                       │     │       │
-                       │  Missing  Qualified
-                       │     │       │
-                       │     │       ▼
-                       │     │  ┌──────────────┐
-                       │     │  │  tool_node   │  (Lead Capture)
-                       │     │  └──────┬───────┘
-                       │     │         │
-                       ▼     ▼         ▼
-                    ┌──────────────────────┐
-                    │    respond_node      │  (Response Generator)
-                    └──────────┬───────────┘
-                               │
-                               ▼
-                          ┌─────────┐
-                          │   END   │
-                          └─────────┘
+```mermaid
+graph TD
+    A(["🗨️ User Message"]) --> B["input_node<br/>Preprocessing"]
+    B --> C["intent_node<br/>LLM + Rule-based Classifier"]
+    C -->|GREETING| G["respond_node<br/>Grounded Response Generator"]
+    C -->|PRODUCT_QUERY| D["rag_node<br/>Knowledge Retriever"]
+    C -->|HIGH_INTENT| D
+    D -->|PRODUCT_QUERY| G
+    D -->|HIGH_INTENT| E["lead_node<br/>Field Extractor"]
+    E -->|"Fully Qualified ✓"| F["tool_node<br/>Lead Capture API"]
+    E -->|"Missing Fields"| G
+    F --> G
+    G --> H(["✅ END"])
+
+    style A fill:#0d1117,stroke:#2563eb,stroke-width:2px,color:#f8fafc
+    style B fill:#161b22,stroke:#94a3b8,color:#f8fafc
+    style C fill:#161b22,stroke:#2563eb,stroke-width:2px,color:#f8fafc
+    style D fill:#161b22,stroke:#f59e0b,stroke-width:2px,color:#f8fafc
+    style E fill:#161b22,stroke:#10b981,stroke-width:2px,color:#f8fafc
+    style F fill:#161b22,stroke:#ef4444,stroke-width:2px,color:#f8fafc
+    style G fill:#161b22,stroke:#2563eb,stroke-width:2px,color:#f8fafc
+    style H fill:#0d1117,stroke:#10b981,stroke-width:2px,color:#f8fafc
 ```
 
 ### Lead Capture Flow (Sequence)
 
-```
-User                    Agent                   Tool (CRM)
- │                        │                        │
- │  "I want to sign up!"  │                        │
- │───────────────────────►│                        │
- │                        │ Intent: HIGH_INTENT    │
- │ "What is your name?"   │                        │
- │◄───────────────────────│                        │
- │                        │                        │
- │  "Adarsh Kumar"        │                        │
- │───────────────────────►│                        │
- │                        │ lead_name = "Adarsh"   │
- │ "What is your email?"  │                        │
- │◄───────────────────────│                        │
- │                        │                        │
- │  "adarsh@example.com"  │                        │
- │───────────────────────►│                        │
- │                        │ lead_email validated ✓  │
- │  "Which platform?"     │                        │
- │◄───────────────────────│                        │
- │                        │                        │
- │  "YouTube"             │                        │
- │───────────────────────►│                        │
- │                        │ All fields collected ✓ │
- │                        │───────────────────────►│
- │                        │    Lead captured ✓     │
- │                        │◄───────────────────────│
- │  "🎉 Welcome aboard!"  │                        │
- │◄───────────────────────│                        │
+```mermaid
+sequenceDiagram
+    participant U as 👤 User
+    participant A as 🤖 Agent
+    participant T as 🔧 Tool (CRM)
+
+    U->>A: I want to sign up!
+    Note over A: intent = HIGH_INTENT
+    A->>U: What is your full name?
+
+    U->>A: Adarsh Kumar
+    Note over A: lead_name = "Adarsh Kumar"
+    A->>U: What is your email?
+
+    U->>A: adarsh@example.com
+    Note over A: lead_email validated ✓
+    A->>U: Which platform do you use?
+
+    U->>A: YouTube
+    Note over A: All fields collected ✓
+
+    A->>T: mock_lead_capture(name, email, platform)
+    T-->>A: Lead captured successfully ✅
+
+    A->>U: 🎉 Welcome aboard! Lead captured.
 ```
 
 ### State Transition Diagram
 
-```
-                    ┌──────────┐
-                    │          │
-          ┌────────►│ greeting │◄─── Initial State
-          │         │          │
-          │         └────┬─┬───┘
-          │              │ │
-          │   PRODUCT    │ │  HIGH_INTENT
-          │   _QUERY     │ │
-          │              ▼ │
-          │         ┌────────┐
-          │         │        │
-          └─────────│inquiry │◄──── Product questions
-                    │        │
-                    └────┬───┘
-                         │
-                    HIGH_INTENT
-                         │
-                         ▼
-                    ┌────────────┐
-              ┌────►│            │
-              │     │lead_collect│◄── Collecting fields
-              │     │            │
-              │     └────┬───────┘
-              │          │
-              │     All fields
-              └──────┘   │ collected
-                         ▼
-                    ┌──────────┐
-                    │          │
-                    │ captured │◄── Tool executed ✓
-                    │          │
-                    └──────────┘
+```mermaid
+stateDiagram-v2
+    [*] --> greeting : Initial State
+
+    greeting --> inquiry : PRODUCT_QUERY detected
+    greeting --> lead_collect : HIGH_INTENT detected
+
+    inquiry --> inquiry : More product questions
+    inquiry --> lead_collect : HIGH_INTENT detected
+
+    lead_collect --> lead_collect : Collecting fields (name / email / platform)
+    lead_collect --> captured : All fields collected + tool executed ✓
+
+    captured --> captured : Follow-up queries (PRODUCT_QUERY)
+
+    note right of greeting : User just said hello
+    note right of inquiry : Asking about plans, pricing, policies
+    note right of lead_collect : Progressively collecting: Name → Email → Platform
+    note right of captured : Lead saved to CRM, tool_called = True
 ```
 
 ---
@@ -325,51 +264,37 @@ project-root/
 
 ### Data Flow Through the Pipeline
 
-```
-User Input
-    │
-    ▼
-input_node() ──── Preprocessing (extensible: PII redaction, spam filter)
-    │
-    ▼
-intent_node() ──── LLM classification → rule-based fallback
-    │                    │
-    │                    ▼
-    │              Updates: intent, conversation_stage
-    │
-    ├── GREETING ──────────────────────────────────────────┐
-    │                                                      │
-    ├── PRODUCT_QUERY ──► rag_node() ─────────────────────┤
-    │                        │                             │
-    │                        ▼                             │
-    │                  Updates: rag_context                 │
-    │                                                      │
-    └── HIGH_INTENT ──► rag_node() ──► lead_node()         │
-                                          │                │
-                                          ▼                │
-                                    Updates:               │
-                                    lead_name              │
-                                    lead_email             │
-                                    lead_platform          │
-                                    missing_fields         │
-                                          │                │
-                                  ┌───────┴───┐            │
-                                  │ Qualified?│            │
-                                  └───┬───┬───┘            │
-                                  Yes │   │ No             │
-                                      ▼   └───────────────►│
-                                tool_node()                │
-                                      │                    │
-                                      ▼                    │
-                              Updates:                     │
-                              is_tool_called = True        │
-                              stage = captured             │
-                                      │                    │
-                                      ▼                    ▼
-                                  respond_node() ◄─────────┘
-                                      │
-                                      ▼
-                                  AIMessage → END
+```mermaid
+graph TD
+    INPUT["📥 User Input"] --> PREPROCESS["input_node<br/>Preprocessing"]
+    PREPROCESS --> CLASSIFY["intent_node<br/>LLM + Rule-based Fallback"]
+    CLASSIFY -->|Updates: intent, stage| ROUTE{"Intent Router"}
+
+    ROUTE -->|GREETING| RESPOND["respond_node<br/>Deterministic greeting"]
+    ROUTE -->|PRODUCT_QUERY| RAG_PQ["rag_node<br/>Updates: rag_context"]
+    ROUTE -->|HIGH_INTENT| RAG_HI["rag_node<br/>Updates: rag_context"]
+
+    RAG_PQ --> RESPOND
+    RAG_HI --> LEAD["lead_node<br/>Updates: lead_name, lead_email,<br/>lead_platform, missing_fields"]
+
+    LEAD --> QUAL{"Qualified?"}
+    QUAL -->|"✅ Yes"| TOOL["tool_node<br/>Updates: is_tool_called = True,<br/>stage = captured"]
+    QUAL -->|"❌ No (missing fields)"| RESPOND
+
+    TOOL --> RESPOND
+    RESPOND --> DONE["📤 AIMessage → END"]
+
+    style INPUT fill:#0d1117,stroke:#2563eb,color:#f8fafc
+    style PREPROCESS fill:#161b22,stroke:#94a3b8,color:#f8fafc
+    style CLASSIFY fill:#161b22,stroke:#2563eb,color:#f8fafc
+    style ROUTE fill:#161b22,stroke:#f59e0b,color:#f8fafc
+    style RAG_PQ fill:#161b22,stroke:#f59e0b,color:#f8fafc
+    style RAG_HI fill:#161b22,stroke:#f59e0b,color:#f8fafc
+    style LEAD fill:#161b22,stroke:#10b981,color:#f8fafc
+    style QUAL fill:#161b22,stroke:#f59e0b,color:#f8fafc
+    style TOOL fill:#161b22,stroke:#ef4444,color:#f8fafc
+    style RESPOND fill:#161b22,stroke:#2563eb,color:#f8fafc
+    style DONE fill:#0d1117,stroke:#10b981,color:#f8fafc
 ```
 
 ---
@@ -427,21 +352,25 @@ class AgentState(TypedDict):
 
 ### Retrieval Process
 
+```mermaid
+graph LR
+    A["📥 User Query"] --> B["Tokenise<br/>into word set"]
+    B --> C["Score Against<br/>All Chunks"]
+    C --> D["Rank by<br/>Overlap Score"]
+    D --> E["Select Top-3<br/>Chunks"]
+    E --> F["Inject into<br/>LLM Prompt"]
+    F --> G["📤 Grounded<br/>Response"]
+
+    style A fill:#0d1117,stroke:#2563eb,color:#f8fafc
+    style B fill:#161b22,stroke:#94a3b8,color:#f8fafc
+    style C fill:#161b22,stroke:#f59e0b,color:#f8fafc
+    style D fill:#161b22,stroke:#f59e0b,color:#f8fafc
+    style E fill:#161b22,stroke:#10b981,color:#f8fafc
+    style F fill:#161b22,stroke:#2563eb,color:#f8fafc
+    style G fill:#0d1117,stroke:#10b981,color:#f8fafc
 ```
-Step 1:  LOAD    knowledge_base.json → flat chunks
-                 (one chunk per plan, policy, and FAQ entry)
 
-Step 2:  QUERY   User message → tokenise into word set
-
-Step 3:  SCORE   For each chunk:
-                 overlap = |query_tokens ∩ chunk_tokens| / |query_tokens|
-
-Step 4:  RANK    Sort chunks by score (descending)
-
-Step 5:  SELECT  Return top-3 chunks with score > 0
-
-Step 6:  INJECT  Concatenate chunks into LLM prompt as "GROUND TRUTH"
-```
+**Scoring formula:** `overlap = |query_tokens ∩ chunk_tokens| / |query_tokens|`
 
 ### Grounding Strategy
 
