@@ -146,18 +146,25 @@ def intent_node(state: AgentState) -> dict:
         if isinstance(prev_ai, AIMessage):
             prev_text = prev_ai.content.lower()
             signup_phrases = [
-                "shall we begin", "sign-up process", "get you started",
-                "full name", "like to sign up", "ready to get started",
-                "start the sign-up", "begin with your", "would you like to subscribe",
-                "interested in signing up", "like to proceed",
+                "shall we begin", "ready to get started",
+                "start the sign-up", "begin with your full name", 
+                "would you like to subscribe", "interested in signing up", 
+                "like to proceed"
             ]
+            
+            # Exclude generic welcome messages from triggering this
+            is_welcome_msg = "what can i do for you today" in prev_text or "what would you like to know" in prev_text
+            
             user_lower = last_msg.strip().lower()
-            if any(phrase in prev_text for phrase in signup_phrases):
+            if not is_welcome_msg and any(phrase in prev_text for phrase in signup_phrases):
                 # Short affirmative or name-like response → HIGH_INTENT
-                if len(user_lower.split()) <= 5 or user_lower in [
+                is_affirmative = user_lower in [
                     "yes", "sure", "okay", "ok", "yeah", "yep", "let's go",
-                    "yes please", "yes i do", "go ahead",
-                ]:
+                    "yes please", "yes i do", "go ahead", "y"
+                ]
+                is_short_non_greeting = len(user_lower.split()) <= 3 and not any(g in user_lower for g in ["hi", "hello", "hey", "greetings"])
+                
+                if is_affirmative or is_short_non_greeting:
                     return {"intent": "HIGH_INTENT", "conversation_stage": "lead_collect"}
 
     # Build recent conversation context for better classification
