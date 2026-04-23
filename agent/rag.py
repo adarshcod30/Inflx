@@ -16,20 +16,26 @@ _knowledge_sections: list[dict[str, str]] = []
 
 
 def _load_knowledge_base() -> list[dict[str, str]]:
-    """Parse the Markdown knowledge base into titled sections."""
+    """Parse the Markdown knowledge base into titled sections.
+
+    Groups h2-level parent sections with all their h3-level children
+    so that a query like 'pricing plans' returns the full pricing block
+    including Basic and Pro plan details.
+    """
     if not _KB_PATH.exists():
         raise FileNotFoundError(f"Knowledge base not found at {_KB_PATH}")
 
     raw = _KB_PATH.read_text(encoding="utf-8")
 
-    sections: list[dict[str, str]] = []
+    # First pass: group by h2 sections (## headings)
+    h2_sections: list[dict[str, str]] = []
     current_title = "General"
     current_body: list[str] = []
 
     for line in raw.splitlines():
-        if line.startswith("##"):
+        if line.startswith("## ") and not line.startswith("### "):
             if current_body:
-                sections.append({
+                h2_sections.append({
                     "title": current_title,
                     "content": "\n".join(current_body).strip(),
                 })
@@ -39,12 +45,46 @@ def _load_knowledge_base() -> list[dict[str, str]]:
             current_body.append(line)
 
     if current_body:
-        sections.append({
+        h2_sections.append({
             "title": current_title,
             "content": "\n".join(current_body).strip(),
         })
 
-    return sections
+    # Second pass: also create h3-level sections for granular matching
+    h3_sections: list[dict[str, str]] = []
+    current_h2 = "General"
+    current_h3 = None
+    h3_body: list[str] = []
+
+    for line in raw.splitlines():
+        if line.startswith("## ") and not line.startswith("### "):
+            if current_h3 and h3_body:
+                h3_sections.append({
+                    "title": f"{current_h2} > {current_h3}",
+                    "content": "\n".join(h3_body).strip(),
+                })
+            current_h2 = line.lstrip("#").strip()
+            current_h3 = None
+            h3_body = []
+        elif line.startswith("### "):
+            if current_h3 and h3_body:
+                h3_sections.append({
+                    "title": f"{current_h2} > {current_h3}",
+                    "content": "\n".join(h3_body).strip(),
+                })
+            current_h3 = line.lstrip("#").strip()
+            h3_body = []
+        else:
+            h3_body.append(line)
+
+    if current_h3 and h3_body:
+        h3_sections.append({
+            "title": f"{current_h2} > {current_h3}",
+            "content": "\n".join(h3_body).strip(),
+        })
+
+    # Combine both levels: h2 (broad) + h3 (granular)
+    return h2_sections + h3_sections
 
 
 def _ensure_loaded() -> None:
