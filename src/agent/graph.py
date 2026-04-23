@@ -18,7 +18,7 @@ api_key = os.getenv("GOOGLE_API_KEY", "")
 # We use a dummy key if none is provided to allow the graph to be compiled/tested
 # In production, the user must provide a valid GOOGLE_API_KEY
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.0-flash-lite", 
+    model="gemini-3.1-flash-lite-preview", 
     temperature=0.1, 
     google_api_key=os.getenv("GOOGLE_API_KEY", "dummy_key")
 )

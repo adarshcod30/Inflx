@@ -11,7 +11,7 @@ if api_key:
     print(f"Key starts with: {api_key[:10]}...")
 
 try:
-    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite", google_api_key=api_key)
+    llm = ChatGoogleGenerativeAI(model="gemini-3.1-flash-lite-preview", google_api_key=api_key)
     res = llm.invoke("Say hello")
     print(f"Response: {res.content}")
 except Exception as e:
