@@ -1,222 +1,342 @@
 <div align="center">
+  <h1>AutoStream Lead Intelligence</h1>
+  <p><b>Social-to-Lead Agentic Workflow</b></p>
+  <p><i>A 4-node LangGraph AI agent that converts social media conversations into qualified business leads — with intent detection, RAG-powered knowledge retrieval, and automated lead capture.</i></p>
 
-# 🎬 AutoStream Social-to-Lead Agentic Workflow
-**Enterprise-Grade Cognitive Orchestration & Conversational Intelligence**
+  <br />
 
-[![Python Version](https://img.shields.io/badge/Python-3.11+-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
-[![Framework](https://img.shields.io/badge/Orchestration-LangGraph-orange.svg?logo=data:image/png;base64,iVBORw0KGgo=)](https://github.com/langchain-ai/langgraph)
-[![LLM Engine](https://img.shields.io/badge/LLM-Gemini_3.1_Flash_Lite-red.svg?logo=google&logoColor=white)](https://ai.google.dev/)
-[![UI](https://img.shields.io/badge/UI-Streamlit-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](#)
-
-*Transforming casual social media interactions into high-fidelity business leads through autonomous, stateful reasoning.*
-
+  [![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+  [![LangGraph](https://img.shields.io/badge/LangGraph-0.2+-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
+  [![Gemini](https://img.shields.io/badge/Gemini-3.1_Flash_Lite-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
+  [![Streamlit](https://img.shields.io/badge/Streamlit-1.30+-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
+  [![License](https://img.shields.io/badge/License-MIT-10b981?style=for-the-badge)](LICENSE)
 </div>
 
 ---
 
-## 📖 Executive Summary
-**AutoStream** is a next-generation SaaS platform automating video editing for content creators. This repository houses the **Social-to-Lead Agentic Workflow**, a production-ready conversational AI designed to seamlessly interface with prospects across social platforms (e.g., WhatsApp, Instagram). 
+## Table of Contents
 
-Departing from traditional intent-matching chatbots, this system utilizes a **Directed Cyclic Graph (DCG)** for stateful cognitive orchestration. It is capable of context-aware routing, hallucination-free knowledge retrieval via BM25 RAG, and strict, Pydantic-validated entity extraction for CRM integration.
+- [What This Does](#what-this-does)
+- [Architecture](#architecture)
+- [The 4-Node Agent Pipeline](#the-4-node-agent-pipeline)
+- [Pipeline Flow Diagram](#pipeline-flow-diagram)
+- [Tech Stack](#tech-stack)
+- [Project File Structure](#project-file-structure)
+- [Local Setup](#local-setup)
+- [Environment Variables](#environment-variables)
+- [Running the App](#running-the-app)
+- [Running Tests](#running-tests)
+- [Dashboard Pages](#dashboard-pages)
+- [WhatsApp Deployment](#whatsapp-deployment)
+- [Acknowledgements](#acknowledgements)
 
 ---
 
-## 🏗️ System Architecture
+## What This Does
 
-The **AutoStream Social-to-Lead Agentic Workflow** is architected using **LangGraph**, a powerful orchestration framework that allows for the creation of complex, stateful, and cyclic computational graphs. Unlike traditional linear LLM chains, LangGraph enables our agent to maintain a persistent state across multiple conversation turns, which is critical for "slot-filling" tasks like lead qualification.
+AutoStream Lead Intelligence is a conversational AI agent built for **ServiceHive's Inflx** assignment. It simulates a real-world Social-to-Lead workflow for **AutoStream**, a fictional SaaS platform for video content creators.
 
-### Why LangGraph?
-LangGraph was chosen because it provides deterministic control over the agent's reasoning path. By defining the workflow as a Directed Cyclic Graph (DCG), we can implement strict guardrails. For example, the agent can cycle between the `LeadCaptureNode` and the user until all required entities (Name, Email, Platform) are correctly extracted and validated. This prevents the "early execution" problem common in simpler autonomous agents, ensuring that backend tools like `mock_lead_capture` are only triggered when the data is 100% complete and valid.
+The agent does three things automatically:
 
-### State Management
-State is managed through a central `AgentState` object, which utilizes LangGraph's unique "reducers." The `messages` key uses an `operator.add` reducer, allowing the conversation history to accumulate automatically. Other state variables, such as `lead_name` and `intent`, are updated via node transitions. This stateful approach allows the agent to remember partial information provided by the user several turns ago, creating a seamless and intelligent "human-like" sales assistant experience.
+1. **Classifies intent** — Greeting, Product Inquiry, or High-Intent Lead
+2. **Answers product questions** — Using RAG over a local Markdown knowledge base (pricing, features, policies)
+3. **Captures leads** — Collects name, email, and platform one field at a time, then fires `mock_lead_capture()` exactly once
 
-### 1. Cognitive State Machine (Node-Level Flow)
-The following diagram illustrates the internal decision logic of the agent. Notice the cyclic nature: if fields are missing, the graph returns to the user; if complete, it triggers the tool.
+The Streamlit UI provides three views: a live **Chat** interface with a funnel progress indicator, a **Dashboard** with real-time agent state and lead analytics, and an **Architecture** page explaining the full pipeline.
+
+---
+
+## Architecture
+
+The system is built on a **LangGraph `StateGraph`** — a directed graph where each node is a pure function that reads and writes a shared `AgentState` TypedDict. State persists across all conversation turns inside the Streamlit session, giving the agent memory across 5–6 exchanges without any external database.
+
+Every user message enters at `intent_node`, which classifies it using the Gemini 3.1 Flash-Lite LLM with a rule-based fallback. Conditional edges then route the message: greetings skip directly to `respond_node`; product queries pass through `rag_node` for knowledge retrieval; high-intent signals pass through both `rag_node` and `lead_node` for field extraction. The `respond_node` always generates the final reply using the full accumulated context.
+
+The `lead_node` enforces a strict tool gate: `mock_lead_capture()` is called exactly once, only after all three fields (name, email, platform) are collected and validated. The `is_tool_called` flag prevents duplicate captures across turns.
+
+The Streamlit UI is a **channel-agnostic wrapper** — the same `agent_app.invoke()` call can power WhatsApp, Slack, or any other channel without changing the agent logic.
+
+---
+
+## The 4-Node Agent Pipeline
+
+| Node | Responsibility | Input | Output | Routing |
+|---|---|---|---|---|
+| `intent_node` | Classifies user intent via Gemini LLM + rule fallback | Latest message | `intent` field | GREETING → respond, else → rag |
+| `rag_node` | Keyword-overlap retrieval from `knowledge_base.md` | Latest message | Top-3 relevant sections | HIGH_INTENT → lead, else → respond |
+| `lead_node` | Extracts name/email/platform; fires `mock_lead_capture()` | Full conversation | Lead fields + `is_tool_called` | Always → respond |
+| `respond_node` | Generates final reply using LLM + full context | Full state | `AIMessage` appended to messages | → END |
+
+---
+
+## Pipeline Flow Diagram
 
 ```mermaid
-stateDiagram-v2
-    [*] --> ClassifierNode: User Message
-    
-    state ClassifierNode {
-        direction LR
-        Analyze --> PydanticValidation
-        PydanticValidation --> Intent(Greeting/QA/Lead)
-    }
-    
-    ClassifierNode --> GreetingNode: Intent == 'greeting'
-    ClassifierNode --> QANode: Intent == 'product_inquiry'
-    ClassifierNode --> LeadCaptureNode: Intent == 'high_intent_lead'
-    
-    QANode --> LocalRAGEngine: Query KB
-    LocalRAGEngine --> QANode: Contextual Data
-    
-    state LeadCaptureNode {
-        direction TB
-        ExtractEntities --> CheckState
-        CheckState --> MissingFields: [Name, Email, Platform] == False
-        CheckState --> TriggerAPI: [Name, Email, Platform] == True
-    }
-    
-    MissingFields --> [*]: Ask User for Info
-    TriggerAPI --> [*]: Execute Tool & Confirm
-    GreetingNode --> [*]: Send Greeting
-    QANode --> [*]: Send Answer
+graph TD
+    A([User Message]) --> B[intent_node<br/>LLM + rule-based classifier]
+    B -->|GREETING| E[respond_node<br/>LLM response generator]
+    B -->|PRODUCT_QUERY| C[rag_node<br/>Keyword-overlap retriever]
+    B -->|HIGH_INTENT| C
+    C -->|PRODUCT_QUERY| E
+    C -->|HIGH_INTENT and not captured| D[lead_node<br/>Field extractor and tool gate]
+    C -->|HIGH_INTENT and captured| E
+    D --> E
+    E --> F([END])
 ```
 
-### 2. Stateful Memory Schema
-Unlike stateless LLM chains, this workflow persists memory and extracted variables across multiple turns utilizing a strictly typed state dictionary.
-
-```mermaid
-erDiagram
-    AGENT_STATE {
-        Sequence_BaseMessage messages "Chat history with operator.add reducer"
-        Optional_String intent "Current cognitive state"
-        Optional_String lead_name "Extracted entity"
-        Optional_String lead_email "Extracted entity"
-        Optional_String lead_platform "Extracted entity"
-        Boolean is_tool_called "API Execution Gate"
-    }
-    LLM_ENGINE ||--o{ AGENT_STATE : "Mutates via Nodes"
-    LANGGRAPH ||--|| AGENT_STATE : "Persists"
-```
-
----
-
-## 🧠 Core Engineering Modules
-
-### 🔹 Deterministic Intent Classification
-Utilizes the `Gemini 3.1 Flash Lite` model coupled with LangChain's `.with_structured_output()`. By coercing the LLM output into a strict Pydantic schema, we guarantee that the router node receives a valid enum (`greeting`, `product_inquiry`, or `high_intent_lead`), eliminating unexpected routing failures.
-
-### 🔹 Lightweight Retrieval-Augmented Generation (RAG)
-For maximum speed and minimal overhead, the system bypasses heavy vector databases in favor of a local **Rank-BM25 Okapi** algorithm. 
-- **Chunking Strategy**: Section-based Markdown chunking ensures contextual integrity.
-- **Scoring**: BM25 provides highly accurate keyword-frequency matching for pricing and policy queries, injecting the optimal context window into the `qa_node` prompt.
-- **Implementation**: The logic is encapsulated in `agent/rag.py`, ensuring a decoupled knowledge layer.
-
-### 🔹 Gated Tool Execution (Guardrails)
-The `lead_capture_node` implements a strict gating mechanism. It continuously evaluates the `AgentState`. The external Mock API (`mock_lead_capture`) is **mathematically guaranteed** not to execute until `new_name`, `new_email`, and `new_platform` are absolutely non-null, preventing corrupted CRM data injection.
-
----
-
-## 🛠️ Technology Stack
-
-| Component | Technology | Rationale |
-| :--- | :--- | :--- |
-| **Language** | Python 3.11 | Type-hinting support and optimal compatibility for modern AI libraries. |
-| **Orchestrator** | LangGraph | Enables cyclic, stateful workflows essential for multi-turn slot filling. |
-| **LLM Engine** | Gemini 3.1 Flash Lite | High-speed, cost-effective reasoning engine optimized for rapid conversational turns. |
-| **Extraction** | Pydantic v2 | Enforces rigid data structures for LLM outputs, acting as a parsing guardrail. |
-| **Retriever** | Rank-BM25 | High-performance, dependency-light sparse retrieval for document querying. |
-| **Observability UI**| Streamlit | Custom CSS integration provides a real-time visualization of the agent's internal state. |
-
----
-
-## 📂 Project File Structure
-
-```text
-Social-to-Lead-Agentic-Workflow/
-├── app.py                  # Main Streamlit Dashboard & UI Layer
-├── requirements.txt        # Pinned dependencies
-├── Dockerfile              # Multi-stage production container setup
-├── .env.example            # Environment variables template
-├── data/
-│   └── knowledge_base.md   # Ground-truth SaaS documentation (RAG source)
-├── agent/                  # Core AI Logic Package
-│   ├── graph.py            # LangGraph orchestration and node wiring
-│   ├── intent.py           # LLM classification and regex entity extraction
-│   ├── rag.py              # Custom hierarchical markdown semantic search
-│   ├── state.py            # TypedDict schema defining the agent's memory
-│   └── tools.py            # mock_lead_capture implementation
-└── tests/                  # Verification Suite
-    └── test_core.py        # 26 automated tests (RAG, state, graphs, validation)
-```
-
----
-
-## 🚀 Deployment & Installation Guide
-
-### Prerequisites
-- Python 3.11 or higher
-- Git
-- Google AI Studio API Key
-
-### Local Environment Setup
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/adarshcod30/Inflx.git
-   cd Inflx
-   ```
-
-2. **Initialize Isolated Environment:**
-   ```bash
-   python3.11 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install Dependencies:**
-   ```bash
-   pip install --upgrade pip
-   pip install -r requirements.txt
-   ```
-
-4. **Environment Variables:**
-   Create a `.env` file in the project root:
-   ```env
-   GOOGLE_API_KEY=your_gemini_api_key_here
-   ```
-
-5. **Launch the Dashboard:**
-   ```bash
-   streamlit run app.py
-   ```
-
----
-
-## 📱 Production Integration: Meta API (WhatsApp)
-
-To scale this from a local Streamlit dashboard to a live WhatsApp business number, follow this webhook architecture:
+### State Flow
 
 ```mermaid
 sequenceDiagram
-    participant User as WhatsApp User
-    participant Meta as Meta Cloud API
-    participant Webhook as FastAPI/Flask Server
-    participant DB as Redis/DynamoDB
-    participant Agent as LangGraph Engine
+    participant U as User
+    participant I as intent_node
+    participant R as rag_node
+    participant L as lead_node
+    participant Re as respond_node
 
-    User->>Meta: "What is the pro plan?"
-    Meta->>Webhook: POST /webhook (JSON Payload)
-    
-    Webhook->>DB: Fetch AgentState(Phone_Number)
-    DB-->>Webhook: current_state
-    
-    Webhook->>Agent: agent_app.invoke(current_state)
-    Note over Agent: Classifies Intent -> Retrieves RAG -> Generates Answer
-    Agent-->>Webhook: final_state
-    
-    Webhook->>DB: Save final_state(Phone_Number)
-    Webhook->>Meta: POST /messages (AI Response)
-    Meta->>User: "Our Pro plan is $79/month..."
+    U->>I: "Hi, tell me about pricing"
+    I->>R: intent=PRODUCT_QUERY
+    R->>Re: kb_context retrieved
+    Re->>U: Pricing details from knowledge base
+
+    U->>I: "I want to try the Pro plan for YouTube"
+    I->>R: intent=HIGH_INTENT
+    R->>L: HIGH_INTENT routed to lead collection
+    L->>Re: missing_fields=[name, email]
+    Re->>U: "Could you share your full name?"
+
+    U->>I: "Adarsh, adarsh@gmail.com"
+    I->>L: stage=lead_collect maintained
+    L->>Re: name+email extracted, platform=YouTube
+    Re->>U: mock_lead_capture() fired, confirmation shown
 ```
 
-**Implementation Steps:**
-1. **Webhook Reception**: Meta (WhatsApp Business API) sends incoming messages to our webhook URL (e.g., `/api/whatsapp/webhook`).
-2. **Session Hydration**: The serverless function extracts the `User Phone Number` and fetches their previous `AgentState` from a NoSQL database (e.g., Redis or DynamoDB) using the phone number as the session key.
-3. **Graph Invocation**: The existing `agent_app.invoke(current_state)` is executed asynchronously. The LangGraph state machine computes the next move (RAG retrieval, Lead collection, etc.).
-4. **State Persistence**: The updated state (including collected emails/names) is saved back to Redis/DynamoDB.
-5. **Message Dispatch**: The final string output generated by the `respond_node` is POSTed back to the Meta Graph API to be delivered to the user's WhatsApp client.
+---
+
+## Tech Stack
+
+| Component | Technology | Version | Why |
+|---|---|---|---|
+| LLM | Google Gemini 3.1 Flash-Lite Preview | `gemini-3.1-flash-lite-preview` | Fastest, most cost-efficient Gemini model; optimized for agentic tasks |
+| Agent Framework | LangGraph | >=0.2.0 | Stateful graph with conditional routing and typed state |
+| LLM Bindings | LangChain Google GenAI | >=2.0.0 | Official LangChain integration for Gemini |
+| UI | Streamlit | >=1.30.0 | Rapid multi-page dashboard with session state |
+| Language | Python | 3.9+ | Assignment requirement |
+| Validation | Pydantic | >=2.0.0 | Structured output parsing for intent and lead fields |
+| RAG | Custom keyword-overlap | — | No vector DB needed; fast and deterministic |
+| Testing | pytest | >=8.0.0 | Full unit and property-based test coverage |
 
 ---
 
-## 🛡️ Security & Best Practices
-- **Prompt Injection Defense**: System prompts are isolated from user inputs, and structured outputs prevent users from forcing the agent to execute arbitrary tools.
-- **Stateless Execution Context**: While the conversation is stateful, the application runtime is stateless, making it fully horizontally scalable via Docker or Kubernetes.
-- **API Key Masking**: `python-dotenv` ensures credentials are never hardcoded.
+## Project File Structure
+
+```text
+Social-to-Lead Agentic Workflow/
+├── agent/
+│   ├── __init__.py          # Package marker
+│   ├── graph.py             # LangGraph StateGraph — 4 nodes + conditional routing
+│   ├── intent.py            # Intent classification + email/platform extraction
+│   ├── rag.py               # Keyword-overlap RAG retriever over knowledge_base.md
+│   ├── state.py             # AgentState TypedDict + default_state()
+│   └── tools.py             # mock_lead_capture() — simulated CRM API call
+├── data/
+│   └── knowledge_base.md    # AutoStream pricing, features, and policies
+├── tests/
+│   ├── __init__.py
+│   └── test_core.py         # 44 unit + property-based tests
+├── app.py                   # Streamlit multi-page dashboard (Chat / Dashboard / Architecture)
+├── requirements.txt         # Python dependencies
+├── .env.example             # Environment variable template
+├── .env                     # Local secrets (not committed)
+├── .gitignore
+├── Dockerfile               # Container build for deployment
+└── README.md
+```
 
 ---
+
+## Local Setup
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/adarshcod30/Inflx.git
+cd Inflx
+```
+
+### 2. Create and activate the virtual environment
+
+```bash
+python3 -m venv autostream_env
+
+# macOS / Linux
+source autostream_env/bin/activate
+
+# Windows
+autostream_env\Scripts\activate
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and set your Gemini API key:
+
+```env
+GOOGLE_API_KEY=your-gemini-api-key-here
+AUTOSTREAM_MODEL=gemini-3.1-flash-lite-preview
+```
+
+Get your free API key at: https://aistudio.google.com/apikey
+
+---
+
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `GOOGLE_API_KEY` | Yes | — | Gemini API key from Google AI Studio |
+| `AUTOSTREAM_MODEL` | No | `gemini-3.1-flash-lite-preview` | Override the Gemini model name |
+
+---
+
+## Running the App
+
+```bash
+streamlit run app.py
+```
+
+The app opens at `http://localhost:8501` with three pages accessible from the sidebar:
+
+- **Chat** — Conversational interface with funnel progress indicator
+- **Dashboard** — Live agent state, session metrics, and lead profile
+- **Architecture** — Pipeline diagram, routing table, and state schema
+
+---
+
+## Running Tests
+
+```bash
+pytest tests/test_core.py -v
+```
+
+The test suite covers 44 cases across:
+
+- RAG retrieval accuracy (pricing, policies, support)
+- Mock lead capture tool execution
+- Intent classification (rule-based fallback)
+- Email and platform extraction
+- State management and default state keys
+- Graph compilation and node connectivity
+- Model name correctness (`gemini-3.1-flash-lite-preview`)
+- UI constants (`STAGE_TO_INDEX`, `FUNNEL_STEPS`)
+- UI function presence (`render_funnel`, `render_lead_card`, all page renderers)
+
+---
+
+## Dashboard Pages
+
+### Chat Page
+
+The main conversational interface. Shows a 4-step funnel progress indicator at the top (Greeting → Inquiry → Lead Collection → Captured) that updates as the conversation progresses. Chat bubbles are styled differently for user and agent messages. When a lead is captured, a structured lead card appears below the chat showing name, email, platform, plan interest, and capture timestamp.
+
+### Dashboard Page
+
+Three-column live analytics view:
+- **Recent Conversation** — Last 6 messages as compact read-only bubbles
+- **Agent State** — Live metrics: intent classification, conversation stage, qualification status, last response latency, total turns
+- **Lead Profile** — Field-by-field status (Pending → filled) with the lead capture card when complete
+
+### Architecture Page
+
+Full system explanation for anyone without prior context:
+- Pipeline overview in plain English
+- Mermaid flow diagram of the 4-node graph with routing conditions
+- Routing logic table (from node → condition → to node → reason)
+- `AgentState` schema rendered as JSON
+- Technology stack table
+- WhatsApp deployment guide
+
+---
+
+## WhatsApp Deployment
+
+The LangGraph backend is **channel-agnostic** — deploying to WhatsApp requires only a thin webhook adapter. The core agent logic is unchanged.
+
+### Architecture
+
+1. Register a **Twilio WhatsApp Sandbox** (or production number) at twilio.com
+2. Deploy a **FastAPI** webhook server that exposes `POST /webhook`
+3. Twilio forwards every incoming WhatsApp message to your webhook as an HTTP POST
+4. The webhook reconstructs `AgentState` from a persistent store (Redis or DynamoDB), calls `agent_app.invoke(state)`, and sends the AI response back via the Twilio REST API
+5. The Streamlit UI remains a **separate deployment** — both channels share the same `agent_app` Python package
+
+### Example Webhook
+
+```python
+# webhook.py
+from fastapi import FastAPI, Form
+from twilio.rest import Client
+from langchain_core.messages import HumanMessage
+from agent.graph import agent_app
+from agent.state import default_state
+
+app = FastAPI()
+twilio_client = Client()  # reads TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN from env
+
+@app.post("/webhook")
+async def whatsapp_webhook(Body: str = Form(), From: str = Form()):
+    # Load or create session state (use Redis/DynamoDB for persistence)
+    state = load_state(From) or default_state()
+    state["messages"].append(HumanMessage(content=Body))
+
+    # Run the LangGraph agent
+    result = agent_app.invoke(state)
+    save_state(From, result)  # persist updated state
+
+    # Send reply via Twilio
+    reply = result["messages"][-1].content
+    twilio_client.messages.create(
+        body=reply,
+        from_="whatsapp:+14155238886",  # Twilio sandbox number
+        to=From,
+    )
+    return {"status": "ok"}
+```
+
+### Deployment Steps
+
+```bash
+# Install additional deps
+pip install fastapi uvicorn twilio redis
+
+# Run the webhook server
+uvicorn webhook:app --host 0.0.0.0 --port 8000
+
+# Expose locally for testing (use ngrok)
+ngrok http 8000
+# Set the ngrok URL as your Twilio webhook: https://xxxx.ngrok.io/webhook
+```
+
+---
+
+## Acknowledgements
+
+**Developed by Adarsh Dwivedi**
+
+- GitHub: [github.com/adarshcod30](https://github.com/adarshcod30)
+- LinkedIn: [linkedin.com/in/adarshdwivedi30](https://www.linkedin.com/in/adarshdwivedi30)
+
+Built as the ML Intern assignment for **ServiceHive — Inflx** (Social-to-Lead Agentic Workflow).
+
 <div align="center">
-<i>Built with precision for the ServiceHive Engineering Assignment.</i>
+  <b>Architected by Adarsh Dwivedi — AutoStream Lead Intelligence</b>
 </div>
