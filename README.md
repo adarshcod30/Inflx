@@ -71,33 +71,44 @@ AutoStream's Social-to-Lead Agentic Workflow is a **multi-node LangGraph state m
 ### High-Level Architecture
 
 ```mermaid
-block-beta
-    columns 1
-    block:presentation["PRESENTATION LAYER"]
-        A["Streamlit Dashboard UI\n(Chat / Dashboard / Architecture)"]
-    end
-    space
-    block:orchestration["AGENT ORCHESTRATION LAYER"]
-        B["INPUT"] --> C["INTENT"] --> D["RAG"] --> E["LEAD"] --> F["TOOL"] --> G["RESPOND"] --> H["END"]
-    end
-    space
-    block:intelligence["INTELLIGENCE LAYER"]
-        I["Gemini 3.1 Flash-Lite + Intent Classifier + RAG Retriever"]
-    end
-    space
-    block:statelayer["STATE LAYER"]
-        J["AgentState TypedDict — messages | intent | stage | lead_* | rag_context | flags"]
-    end
-    space
-    block:toollayer["TOOL LAYER"]
-        K["mock_lead_capture → CRM API (HubSpot / Salesforce)"]
-    end
-    space
-    block:datalayer["DATA LAYER"]
-        L["knowledge_base.json — Plans, Policies, FAQs"]
+graph TD
+    subgraph Presentation["PRESENTATION LAYER"]
+        A["Streamlit Dashboard UI<br/>(Chat / Dashboard / Architecture)"]
     end
 
-    presentation --> orchestration --> intelligence --> statelayer --> toollayer --> datalayer
+    subgraph Orchestration["AGENT ORCHESTRATION LAYER"]
+        direction LR
+        B[INPUT] --> C[INTENT] --> D[RAG] --> E[LEAD] --> F[TOOL] --> G[RESPOND] --> H([END])
+    end
+
+    subgraph Intelligence["INTELLIGENCE LAYER"]
+        I["Gemini 3.1 Flash-Lite + Intent Classifier + RAG Retriever"]
+    end
+
+    subgraph StateLayer["STATE LAYER"]
+        J["AgentState TypedDict<br/>messages | intent | stage | lead_* | rag_context | flags"]
+    end
+
+    subgraph ToolLayer["TOOL LAYER"]
+        K["mock_lead_capture → CRM API<br/>(HubSpot / Salesforce)"]
+    end
+
+    subgraph DataLayer["DATA LAYER"]
+        L["knowledge_base.json<br/>Plans, Policies, FAQs"]
+    end
+
+    Presentation --> Orchestration
+    Orchestration --> Intelligence
+    Intelligence --> StateLayer
+    StateLayer --> ToolLayer
+    ToolLayer --> DataLayer
+
+    style Presentation fill:#1c2128,stroke:#2563eb,color:#f8fafc
+    style Orchestration fill:#1c2128,stroke:#10b981,color:#f8fafc
+    style Intelligence fill:#1c2128,stroke:#f59e0b,color:#f8fafc
+    style StateLayer fill:#1c2128,stroke:#94a3b8,color:#f8fafc
+    style ToolLayer fill:#1c2128,stroke:#ef4444,color:#f8fafc
+    style DataLayer fill:#1c2128,stroke:#64748b,color:#f8fafc
 ```
 
 ### Layered Architecture
@@ -213,7 +224,7 @@ stateDiagram-v2
 
     note right of greeting : User just said hello
     note right of inquiry : Asking about plans, pricing, policies
-    note right of lead_collect : Progressively collecting: Name → Email → Platform
+    note right of lead_collect : Progressively collecting fields (Name, Email, Platform)
     note right of captured : Lead saved to CRM, tool_called = True
 ```
 
