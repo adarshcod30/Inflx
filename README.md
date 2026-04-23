@@ -1,139 +1,115 @@
-# ⚡ Social-to-Lead Agentic Workflow
-**Enterprise Conversational Agent & Autonomous Lead Capture**
+<div align="center">
 
-A highly scalable, 4-node LangGraph AI pipeline that engages users, answers product queries using RAG, dynamically identifies high-intent behavior, and autonomously qualifies and captures leads without human intervention.
+# 🎬 AutoStream Social-to-Lead Agentic Workflow
+**Enterprise-Grade Cognitive Orchestration & Conversational Intelligence**
 
-🚀 **Built for ServiceHive Internship Assignment**
+[![Python Version](https://img.shields.io/badge/Python-3.11+-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![Framework](https://img.shields.io/badge/Orchestration-LangGraph-orange.svg?logo=data:image/png;base64,iVBORw0KGgo=)](https://github.com/langchain-ai/langgraph)
+[![LLM Engine](https://img.shields.io/badge/LLM-Gemini_3.1_Flash_Lite-red.svg?logo=google&logoColor=white)](https://ai.google.dev/)
+[![UI](https://img.shields.io/badge/UI-Streamlit-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](#)
 
-![Dashboard Overview](docs/screenshots/overview.png)
-*📸 Agent Console: Live conversation interface with real-time pipeline telemetry and state tracking.*
+*Transforming casual social media interactions into high-fidelity business leads through autonomous, stateful reasoning.*
 
----
-
-## 📖 Table of Contents
-- [The Problem — Why This Exists](#the-problem--why-this-exists)
-- [Solution Overview](#solution-overview)
-- [System Architecture](#system-architecture)
-- [The 4-Node LangGraph Pipeline](#the-4-node-langgraph-pipeline)
-- [Data Flow Diagram (DFD)](#data-flow-diagram-dfd)
-- [Tech Stack](#tech-stack)
-- [Project File Structure](#project-file-structure)
-- [Setup & Installation](#setup--installation)
-- [WhatsApp Webhook Deployment](#whatsapp-webhook-deployment)
-- [Evaluation Criteria Alignment](#evaluation-criteria-alignment)
+</div>
 
 ---
 
-## 🚨 The Problem — Why This Exists
-Most customer support chatbots are simple FAQ retrieval systems. They do not understand intent transitions. When a user shifts from asking *"What is the pricing?"* to *"I want to sign up for my YouTube channel,"* traditional bots either provide a generic link or fail entirely.
+## 📖 Executive Summary
+**AutoStream** is a next-generation SaaS platform automating video editing for content creators. This repository houses the **Social-to-Lead Agentic Workflow**, a production-ready conversational AI designed to seamlessly interface with prospects across social platforms (e.g., WhatsApp, Instagram). 
 
-The **Critical Gap**: Without stateful intent tracking, companies lose high-intent leads who are ready to purchase but are not actively guided through a qualification funnel.
-
-This project solves this by orchestrating a true **State Machine Agent** using LangGraph, capable of retaining conversational context, dynamically shifting from "Support Mode" to "Sales Mode", and executing a mock CRM tool only when precise conditions are met.
+Departing from traditional intent-matching chatbots, this system utilizes a **Directed Cyclic Graph (DCG)** for stateful cognitive orchestration. It is capable of context-aware routing, hallucination-free knowledge retrieval via BM25 RAG, and strict, Pydantic-validated entity extraction for CRM integration.
 
 ---
 
-## 🧠 Solution Overview
-The **Social-to-Lead Agentic Workflow** is an autonomous AI agent system designed for **AutoStream** (a fictional SaaS for video creators).
+## 🏗️ System Architecture
 
-1. **Ingests Chat:** Monitors ongoing conversation messages.
-2. **Detects Intent:** Uses an LLM with fallback heuristics to classify intent (`GREETING`, `PRODUCT_QUERY`, `HIGH_INTENT`).
-3. **Retrieves Knowledge (RAG):** Automatically parses the local Markdown knowledge base and fetches relevant pricing or policy sections via keyword semantic matching.
-4. **Qualifies Leads:** When intent shifts to `HIGH_INTENT`, the agent autonomously tracks missing fields (`name`, `email`, `platform`), prompts the user naturally, and validates inputs (e.g., regex email validation).
-5. **Executes Action:** Once all parameters are collected, it securely triggers the `mock_lead_capture()` tool and updates the pipeline state.
+The **AutoStream Social-to-Lead Agentic Workflow** is architected using **LangGraph**, a powerful orchestration framework that allows for the creation of complex, stateful, and cyclic computational graphs. Unlike traditional linear LLM chains, LangGraph enables our agent to maintain a persistent state across multiple conversation turns, which is critical for "slot-filling" tasks like lead qualification.
 
-![Pipeline Execution](docs/screenshots/pipeline.png)
-*📸 Pipeline Architecture: Visualization of the 4-node execution graph.*
+### Why LangGraph?
+LangGraph was chosen because it provides deterministic control over the agent's reasoning path. By defining the workflow as a Directed Cyclic Graph (DCG), we can implement strict guardrails. For example, the agent can cycle between the `LeadCaptureNode` and the user until all required entities (Name, Email, Platform) are correctly extracted and validated. This prevents the "early execution" problem common in simpler autonomous agents, ensuring that backend tools like `mock_lead_capture` are only triggered when the data is 100% complete and valid.
 
----
+### State Management
+State is managed through a central `AgentState` object, which utilizes LangGraph's unique "reducers." The `messages` key uses an `operator.add` reducer, allowing the conversation history to accumulate automatically. Other state variables, such as `lead_name` and `intent`, are updated via node transitions. This stateful approach allows the agent to remember partial information provided by the user several turns ago, creating a seamless and intelligent "human-like" sales assistant experience.
 
-## 🏛️ System Architecture
-
-### 1. LangGraph.js Orchestration (State Machine)
-The core of the application is a stateful multi-agent pipeline: `Intent -> RAG -> Lead -> Respond`. A persistent `AgentState` dictionary flows through every node, maintaining immutable data for the current turn.
-
-### 2. Gemini 2.0 Flash Lite Integration
-The `Decision Engine` utilizes `gemini-2.0-flash-lite` for high-speed, low-latency reasoning. It is abstracted gracefully—if API limits are hit, the system implements deterministic rule-based fallbacks to ensure zero downtime.
-
-### 3. Retrieval-Augmented Generation (RAG)
-Instead of a heavy vector database for a small context, this architecture uses an optimized, in-memory hierarchical Markdown parser. It splits the `knowledge_base.md` into parent/child nodes and performs dynamic keyword overlap scoring to inject exact product limits and pricing tiers directly into the LLM context window.
-
-### 4. Telemetry Dashboard (Streamlit)
-A completely custom-styled, dark-mode Streamlit interface providing:
-- Real-time pipeline progression
-- Granular agent state visibility (slots filled, active intent, latency)
-- Premium UI/UX mimicking enterprise command centers
-
----
-
-## ⚙️ The 4-Node LangGraph Pipeline
-
-The LangGraph State Machine controls cognitive logic with absolute determinism.
-
-1. **`intent_node`**: Receives user input and assigns an operational mode.
-2. **`rag_node`**: Fetches grounded facts. Skipped if intent is merely a greeting.
-3. **`lead_node`**: Activates during `HIGH_INTENT`. Inspects chat history to extract entities (Name, Email, Platform) and computes the delta of missing information.
-4. **`respond_node`**: Receives all upstream state, the RAG context, and the missing fields matrix. Generates the final synthesized response to guide the user.
+### 1. Cognitive State Machine (Node-Level Flow)
+The following diagram illustrates the internal decision logic of the agent. Notice the cyclic nature: if fields are missing, the graph returns to the user; if complete, it triggers the tool.
 
 ```mermaid
-flowchart TB
-    %% Definitions
-    classDef startEnd fill:#000,stroke:#333,stroke-width:4px,color:#fff
-    classDef agent fill:#1d4ed8,stroke:#93c5fd,stroke-width:2px,color:#fff,rx:10,ry:10
-    classDef llm fill:#b45309,stroke:#fde68a,stroke-width:2px,color:#fff,rx:5,ry:5
-    classDef action fill:#047857,stroke:#a7f3d0,stroke-width:2px,color:#fff
+stateDiagram-v2
+    [*] --> ClassifierNode: User Message
     
-    Start((User Message)) --> Intent
+    state ClassifierNode {
+        direction LR
+        Analyze --> PydanticValidation
+        PydanticValidation --> Intent(Greeting/QA/Lead)
+    }
     
-    subgraph Cognitive Pipeline
-        Intent[🔍 1. Intent Node<br/><small>Classifies state</small>]
-        RAG[📚 2. RAG Node<br/><small>Retrieves context</small>]
-        Lead[🎯 3. Lead Node<br/><small>Extracts entities</small>]
-        Respond[💬 4. Respond Node<br/><small>Generates reply</small>]
-    end
+    ClassifierNode --> GreetingNode: Intent == 'greeting'
+    ClassifierNode --> QANode: Intent == 'product_inquiry'
+    ClassifierNode --> LeadCaptureNode: Intent == 'high_intent_lead'
     
-    Intent -- "PRODUCT_QUERY" --> RAG
-    Intent -- "HIGH_INTENT" --> RAG
-    Intent -- "GREETING" --> Respond
+    QANode --> LocalRAGEngine: Query KB
+    LocalRAGEngine --> QANode: Contextual Data
     
-    RAG -- "HIGH_INTENT" --> Lead
-    RAG -- "PRODUCT_QUERY" --> Respond
+    state LeadCaptureNode {
+        direction TB
+        ExtractEntities --> CheckState
+        CheckState --> MissingFields: [Name, Email, Platform] == False
+        CheckState --> TriggerAPI: [Name, Email, Platform] == True
+    }
     
-    Lead -- "Validates Fields" --> Exec
-    
-    subgraph Execution
-        Exec{Tool Gate<br/><small>All fields present?</small>}
-        Mock((mock_lead_capture))
-    end
-    
-    Exec -- Yes --> Mock
-    Mock --> Respond
-    Exec -- No --> Respond
-    
-    Respond --> Finish((End Turn))
-    
-    class Start,Finish startEnd
-    class Intent,RAG,Lead,Respond agent
-    class Exec llm
-    class Mock action
+    MissingFields --> [*]: Ask User for Info
+    TriggerAPI --> [*]: Execute Tool & Confirm
+    GreetingNode --> [*]: Send Greeting
+    QANode --> [*]: Send Answer
 ```
 
-![Lead Capture Success](docs/screenshots/lead.png)
-*📸 Execution: Successful routing and capture of a high-intent prospect.*
+### 2. Stateful Memory Schema
+Unlike stateless LLM chains, this workflow persists memory and extracted variables across multiple turns utilizing a strictly typed state dictionary.
+
+```mermaid
+erDiagram
+    AGENT_STATE {
+        Sequence_BaseMessage messages "Chat history with operator.add reducer"
+        Optional_String intent "Current cognitive state"
+        Optional_String lead_name "Extracted entity"
+        Optional_String lead_email "Extracted entity"
+        Optional_String lead_platform "Extracted entity"
+        Boolean is_tool_called "API Execution Gate"
+    }
+    LLM_ENGINE ||--o{ AGENT_STATE : "Mutates via Nodes"
+    LANGGRAPH ||--|| AGENT_STATE : "Persists"
+```
 
 ---
 
-## 🛠️ Tech Stack
+## 🧠 Core Engineering Modules
 
-| Category | Technology | Purpose |
+### 🔹 Deterministic Intent Classification
+Utilizes the `Gemini 3.1 Flash Lite` model coupled with LangChain's `.with_structured_output()`. By coercing the LLM output into a strict Pydantic schema, we guarantee that the router node receives a valid enum (`greeting`, `product_inquiry`, or `high_intent_lead`), eliminating unexpected routing failures.
+
+### 🔹 Lightweight Retrieval-Augmented Generation (RAG)
+For maximum speed and minimal overhead, the system bypasses heavy vector databases in favor of a local **Rank-BM25 Okapi** algorithm. 
+- **Chunking Strategy**: Section-based Markdown chunking ensures contextual integrity.
+- **Scoring**: BM25 provides highly accurate keyword-frequency matching for pricing and policy queries, injecting the optimal context window into the `qa_node` prompt.
+- **Implementation**: The logic is encapsulated in `agent/rag.py`, ensuring a decoupled knowledge layer.
+
+### 🔹 Gated Tool Execution (Guardrails)
+The `lead_capture_node` implements a strict gating mechanism. It continuously evaluates the `AgentState`. The external Mock API (`mock_lead_capture`) is **mathematically guaranteed** not to execute until `new_name`, `new_email`, and `new_platform` are absolutely non-null, preventing corrupted CRM data injection.
+
+---
+
+## 🛠️ Technology Stack
+
+| Component | Technology | Rationale |
 | :--- | :--- | :--- |
-| **Language** | Python 3.11 | Core runtime environment |
-| **Orchestration** | LangGraph | Stateful multi-node agent pipeline management |
-| **LLM Engine** | Langchain Google GenAI | Integration with Gemini 2.0 Flash Lite |
-| **Frontend** | Streamlit | Real-time, reactive telemetry dashboard and chat UI |
-| **Validation** | Pydantic & Regex | Strict enforcement of email formats and entity extraction |
-| **Testing** | Pytest | 26/26 passing unit tests covering all edge cases |
-| **Containerization** | Docker | Scalable, reproducible production builds |
+| **Language** | Python 3.11 | Type-hinting support and optimal compatibility for modern AI libraries. |
+| **Orchestrator** | LangGraph | Enables cyclic, stateful workflows essential for multi-turn slot filling. |
+| **LLM Engine** | Gemini 3.1 Flash Lite | High-speed, cost-effective reasoning engine optimized for rapid conversational turns. |
+| **Extraction** | Pydantic v2 | Enforces rigid data structures for LLM outputs, acting as a parsing guardrail. |
+| **Retriever** | Rank-BM25 | High-performance, dependency-light sparse retrieval for document querying. |
+| **Observability UI**| Streamlit | Custom CSS integration provides a real-time visualization of the agent's internal state. |
 
 ---
 
@@ -144,89 +120,103 @@ Social-to-Lead-Agentic-Workflow/
 ├── app.py                  # Main Streamlit Dashboard & UI Layer
 ├── requirements.txt        # Pinned dependencies
 ├── Dockerfile              # Multi-stage production container setup
-├── .dockerignore           # Optimized build context
 ├── .env.example            # Environment variables template
-├── docs/screenshots/       # UI mockups and telemetry visuals
 ├── data/
 │   └── knowledge_base.md   # Ground-truth SaaS documentation (RAG source)
 ├── agent/                  # Core AI Logic Package
-│   ├── __init__.py
 │   ├── graph.py            # LangGraph orchestration and node wiring
 │   ├── intent.py           # LLM classification and regex entity extraction
 │   ├── rag.py              # Custom hierarchical markdown semantic search
 │   ├── state.py            # TypedDict schema defining the agent's memory
 │   └── tools.py            # mock_lead_capture implementation
 └── tests/                  # Verification Suite
-    ├── __init__.py
     └── test_core.py        # 26 automated tests (RAG, state, graphs, validation)
 ```
 
 ---
 
-## 🚀 Setup & Installation
+## 🚀 Deployment & Installation Guide
 
-### Local Execution (Virtual Environment)
+### Prerequisites
+- Python 3.11 or higher
+- Git
+- Google AI Studio API Key
+
+### Local Environment Setup
+
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/adarshcod30/Inflx.git
    cd Inflx
    ```
-2. **Set up environment variables:**
+
+2. **Initialize Isolated Environment:**
    ```bash
-   cp .env.example .env
-   # Edit .env and insert your GOOGLE_API_KEY
+   python3.11 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
-3. **Create virtual environment and install dependencies:**
+
+3. **Install Dependencies:**
    ```bash
-   python3 -m venv inflx_env
-   source inflx_env/bin/activate
+   pip install --upgrade pip
    pip install -r requirements.txt
    ```
-4. **Run the test suite to verify integrity:**
-   ```bash
-   python -m pytest tests/ -v
+
+4. **Environment Variables:**
+   Create a `.env` file in the project root:
+   ```env
+   GOOGLE_API_KEY=your_gemini_api_key_here
    ```
-5. **Launch the dashboard:**
+
+5. **Launch the Dashboard:**
    ```bash
    streamlit run app.py
    ```
 
-### Docker Execution
-1. **Build the image:**
-   ```bash
-   docker build -t autostream-agent .
-   ```
-2. **Run the container:**
-   ```bash
-   docker run -p 8501:8501 --env-file .env autostream-agent
-   ```
-3. Open `http://localhost:8501` in your browser.
+---
+
+## 📱 Production Integration: Meta API (WhatsApp)
+
+To scale this from a local Streamlit dashboard to a live WhatsApp business number, follow this webhook architecture:
+
+```mermaid
+sequenceDiagram
+    participant User as WhatsApp User
+    participant Meta as Meta Cloud API
+    participant Webhook as FastAPI/Flask Server
+    participant DB as Redis/DynamoDB
+    participant Agent as LangGraph Engine
+
+    User->>Meta: "What is the pro plan?"
+    Meta->>Webhook: POST /webhook (JSON Payload)
+    
+    Webhook->>DB: Fetch AgentState(Phone_Number)
+    DB-->>Webhook: current_state
+    
+    Webhook->>Agent: agent_app.invoke(current_state)
+    Note over Agent: Classifies Intent -> Retrieves RAG -> Generates Answer
+    Agent-->>Webhook: final_state
+    
+    Webhook->>DB: Save final_state(Phone_Number)
+    Webhook->>Meta: POST /messages (AI Response)
+    Meta->>User: "Our Pro plan is $79/month..."
+```
+
+**Implementation Steps:**
+1. **Webhook Reception**: Meta (WhatsApp Business API) sends incoming messages to our webhook URL (e.g., `/api/whatsapp/webhook`).
+2. **Session Hydration**: The serverless function extracts the `User Phone Number` and fetches their previous `AgentState` from a NoSQL database (e.g., Redis or DynamoDB) using the phone number as the session key.
+3. **Graph Invocation**: The existing `agent_app.invoke(current_state)` is executed asynchronously. The LangGraph state machine computes the next move (RAG retrieval, Lead collection, etc.).
+4. **State Persistence**: The updated state (including collected emails/names) is saved back to Redis/DynamoDB.
+5. **Message Dispatch**: The final string output generated by the `respond_node` is POSTed back to the Meta Graph API to be delivered to the user's WhatsApp client.
 
 ---
 
-## 💬 WhatsApp Webhook Deployment
-
-*(Answering the required architecture question: Explain how you would integrate this agent with WhatsApp using Webhooks)*
-
-To deploy this LangGraph agent to WhatsApp via Webhooks in a production environment, I would decouple the UI from the reasoning engine and deploy it as a Serverless API using AWS API Gateway + AWS Lambda (or FastAPI on a containerized service).
-
-1. **Webhook Reception:** Meta (WhatsApp Business API) sends incoming messages to our webhook URL (e.g., `/api/whatsapp/webhook`).
-2. **Session Hydration:** The serverless function extracts the `User Phone Number` and fetches their previous `AgentState` from a NoSQL database (e.g., Redis or DynamoDB) using the phone number as the session key.
-3. **Graph Invocation:** The existing `agent_app.invoke(current_state)` is executed asynchronously. The LangGraph state machine computes the next move (RAG retrieval, Lead collection, etc.).
-4. **State Persistence:** The updated state (including collected emails/names) is saved back to Redis/DynamoDB.
-5. **Message Dispatch:** The final string output generated by the `respond_node` is POSTed back to the Meta Graph API to be delivered to the user's WhatsApp client.
-
-This architecture ensures high concurrency, zero state loss, and perfect integration of the exact same LangGraph intelligence used in this dashboard.
+## 🛡️ Security & Best Practices
+- **Prompt Injection Defense**: System prompts are isolated from user inputs, and structured outputs prevent users from forcing the agent to execute arbitrary tools.
+- **Stateless Execution Context**: While the conversation is stateful, the application runtime is stateless, making it fully horizontally scalable via Docker or Kubernetes.
+- **API Key Masking**: `python-dotenv` ensures credentials are never hardcoded.
 
 ---
-
-## 🎯 Evaluation Criteria Alignment
-
-| Criteria | Implementation Status |
-| :--- | :--- |
-| **Agent reasoning & intent detection** | ✅ Handled dynamically in `intent_node` with strict fallback boundaries. |
-| **Correct use of RAG** | ✅ Zero-hallucination Markdown parser fetching exact pricing metrics. |
-| **Clean state management** | ✅ Immutable LangGraph `AgentState` preserving memory over N-turns. |
-| **Proper tool calling logic** | ✅ Strict conditional edge gate: `mock_lead_capture` ONLY fires when Name + valid Email + Platform exist. |
-| **Code clarity & structure** | ✅ Enterprise modular design (`agent/` package), typed dicts, comprehensive docstrings. |
-| **Real-world deployability** | ✅ Containerized via Docker, CI-ready Pytest suite, isolated `.env` configuration. |
+<div align="center">
+<i>Built with precision for the ServiceHive Engineering Assignment.</i>
+</div>
