@@ -18,7 +18,7 @@ api_key = os.getenv("GOOGLE_API_KEY", "")
 # We use a dummy key if none is provided to allow the graph to be compiled/tested
 # In production, the user must provide a valid GOOGLE_API_KEY
 llm = ChatGoogleGenerativeAI(
-    model="gemini-3.1-flash-lite-preview", 
+    model="gemini-1.5-flash", 
     temperature=0.1, 
     google_api_key=os.getenv("GOOGLE_API_KEY", "dummy_key")
 )
@@ -117,9 +117,14 @@ Conversation history:"""
     new_email = details.email or state.get("lead_email")
     new_platform = details.platform or state.get("lead_platform")
     
+    import re
     missing = []
     if not new_name: missing.append("Name")
-    if not new_email: missing.append("Email")
+    if not new_email: 
+        missing.append("Email")
+    elif not re.match(r"[^@]+@[^@]+\.[^@]+", new_email):
+        missing.append("a valid Email address")
+        new_email = None
     if not new_platform: missing.append("Creator Platform (e.g., YouTube, Instagram)")
     
     if not missing:

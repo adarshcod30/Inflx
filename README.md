@@ -24,7 +24,13 @@ Departing from traditional intent-matching chatbots, this system utilizes a **Di
 
 ## 🏗️ System Architecture
 
-The core of the system is governed by **LangGraph**, providing deterministic control over non-deterministic LLM outputs. This ensures enterprise-grade reliability and prevents premature API executions.
+The **AutoStream Social-to-Lead Agentic Workflow** is architected using **LangGraph**, a powerful orchestration framework that allows for the creation of complex, stateful, and cyclic computational graphs. Unlike traditional linear LLM chains, LangGraph enables our agent to maintain a persistent state across multiple conversation turns, which is critical for "slot-filling" tasks like lead qualification.
+
+### Why LangGraph?
+LangGraph was chosen because it provides deterministic control over the agent's reasoning path. By defining the workflow as a Directed Cyclic Graph (DCG), we can implement strict guardrails. For example, the agent can cycle between the `LeadCaptureNode` and the user until all required entities (Name, Email, Platform) are correctly extracted and validated. This prevents the "early execution" problem common in simpler autonomous agents, ensuring that backend tools like `mock_lead_capture` are only triggered when the data is 100% complete and valid.
+
+### State Management
+State is managed through a central `AgentState` object, which utilizes LangGraph's unique "reducers." The `messages` key uses an `operator.add` reducer, allowing the conversation history to accumulate automatically. Other state variables, such as `lead_name` and `intent`, are updated via node transitions. This stateful approach allows the agent to remember partial information provided by the user several turns ago, creating a seamless and intelligent "human-like" sales assistant experience.
 
 ### 1. Cognitive State Machine
 ```mermaid

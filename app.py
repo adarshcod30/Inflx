@@ -19,46 +19,90 @@ st.set_page_config(
 # Custom CSS for Premium Look
 st.markdown("""
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+    
+    html, body, [class*="st-"] {
+        font-family: 'Inter', sans-serif;
+    }
+    
     .main {
-        background: linear-gradient(135deg, #1e1e2f 0%, #121212 100%);
+        background: radial-gradient(circle at top right, #1e1e2f, #121212);
         color: #ffffff;
     }
-    .stChatFloatingInputContainer {
-        bottom: 20px;
+    
+    /* Glassmorphism for containers */
+    div[data-testid="stVerticalBlock"] > div:has(div.stChatFloatingInputContainer) {
+        background: transparent;
     }
-    .st-emotion-cache-1c7n2ka {
-        background-color: rgba(255, 255, 255, 0.05);
+    
+    .stChatMessage {
+        background-color: rgba(255, 255, 255, 0.03);
         border-radius: 15px;
-        padding: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 10px;
+        backdrop-filter: blur(10px);
     }
+    
     .stButton>button {
         background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
         color: white;
         border: none;
         border-radius: 8px;
-        transition: 0.3s;
+        font-weight: 600;
+        transition: 0.3s all ease;
     }
+    
     .stButton>button:hover {
-        transform: scale(1.02);
-        box-shadow: 0 4px 15px rgba(37, 117, 252, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(37, 117, 252, 0.5);
     }
+    
     .sidebar .sidebar-content {
-        background-color: #1e1e2f;
+        background-color: #161625;
     }
+    
     h1 {
-        background: -webkit-linear-gradient(#fff, #999);
+        background: linear-gradient(90deg, #fff 0%, #aaa 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: 800;
+        letter-spacing: -0.5px;
     }
+    
     .status-card {
-        background: rgba(255, 255, 255, 0.03);
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 10px;
-        border-left: 5px solid #2575fc;
+        background: rgba(37, 117, 252, 0.1);
+        border-radius: 12px;
+        padding: 18px;
+        margin-bottom: 15px;
+        border: 1px solid rgba(37, 117, 252, 0.2);
     }
+    
+    .field-label {
+        color: #888;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 4px;
+    }
+    
+    .field-value {
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 10px;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        margin-right: 5px;
+    }
+    
+    .badge-blue { background: #2575fc; color: white; }
+    .badge-green { background: #00c853; color: white; }
+    .badge-red { background: #ff3d00; color: white; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -109,9 +153,14 @@ with st.sidebar:
     
     st.markdown(f"""
     <div class="status-card">
-        <b>Name:</b> {st.session_state.lead_name or '<i>Missing</i>'}<br>
-        <b>Email:</b> {st.session_state.lead_email or '<i>Missing</i>'}<br>
-        <b>Platform:</b> {st.session_state.lead_platform or '<i>Missing</i>'}
+        <div class="field-label">Full Name</div>
+        <div class="field-value">{st.session_state.lead_name or 'Not Captured'}</div>
+        
+        <div class="field-label">Email Address</div>
+        <div class="field-value">{st.session_state.lead_email or 'Not Captured'}</div>
+        
+        <div class="field-label">Creator Platform</div>
+        <div class="field-value">{st.session_state.lead_platform or 'Not Captured'}</div>
     </div>
     """, unsafe_allow_html=True)
     
