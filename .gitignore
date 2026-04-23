@@ -3,6 +3,7 @@
 venv/
 venv_*/
 inflx_env/
+autostream_env/
 env/
 
 # Python bytecode
