@@ -112,7 +112,7 @@ with col1:
     st.image("https://cdn-icons-png.flaticon.com/512/3669/3669911.png", width=80)
 with col2:
     st.title("AutoStream Agentic Workflow")
-    st.caption("🚀 Powered by LangGraph & Gemini 1.5 Flash | Social-to-Lead Generation")
+    st.caption("🚀 Powered by LangGraph & Gemini 2 Flash Lite | Social-to-Lead Generation")
 
 st.divider()
 

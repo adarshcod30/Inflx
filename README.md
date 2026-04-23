@@ -5,7 +5,7 @@
 
 [![Python Version](https://img.shields.io/badge/Python-3.11+-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![Framework](https://img.shields.io/badge/Orchestration-LangGraph-orange.svg?logo=data:image/png;base64,iVBORw0KGgo=)](https://github.com/langchain-ai/langgraph)
-[![LLM Engine](https://img.shields.io/badge/LLM-Gemini_1.5_Flash-red.svg?logo=google&logoColor=white)](https://ai.google.dev/)
+[![LLM Engine](https://img.shields.io/badge/LLM-Gemini_2_Flash_Lite-red.svg?logo=google&logoColor=white)](https://ai.google.dev/)
 [![UI](https://img.shields.io/badge/UI-Streamlit-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](#)
 
@@ -85,7 +85,7 @@ erDiagram
 ## 🧠 Core Engineering Modules
 
 ### 🔹 Deterministic Intent Classification
-Utilizes the `Gemini 1.5 Flash` model coupled with LangChain's `.with_structured_output()`. By coercing the LLM output into a strict Pydantic schema, we guarantee that the router node receives a valid enum (`greeting`, `product_inquiry`, or `high_intent_lead`), eliminating unexpected routing failures.
+Utilizes the `Gemini 2 Flash Lite` model coupled with LangChain's `.with_structured_output()`. By coercing the LLM output into a strict Pydantic schema, we guarantee that the router node receives a valid enum (`greeting`, `product_inquiry`, or `high_intent_lead`), eliminating unexpected routing failures.
 
 ### 🔹 Lightweight Retrieval-Augmented Generation (RAG)
 For maximum speed and minimal overhead, the system bypasses heavy vector databases in favor of a local **Rank-BM25 Okapi** algorithm. 
@@ -103,7 +103,7 @@ The `lead_capture_node` implements a strict gating mechanism. It continuously ev
 | :--- | :--- | :--- |
 | **Language** | Python 3.11 | Type-hinting support and optimal compatibility for modern AI libraries. |
 | **Orchestrator** | LangGraph | Enables cyclic, stateful workflows essential for multi-turn slot filling. |
-| **LLM Engine** | Gemini 1.5 Flash | High-speed, cost-effective reasoning engine optimized for rapid conversational turns. |
+| **LLM Engine** | Gemini 2 Flash Lite | High-speed, cost-effective reasoning engine optimized for rapid conversational turns. |
 | **Extraction** | Pydantic v2 | Enforces rigid data structures for LLM outputs, acting as a parsing guardrail. |
 | **Retriever** | Rank-BM25 | High-performance, dependency-light sparse retrieval for document querying. |
 | **Observability UI**| Streamlit | Custom CSS integration provides a real-time visualization of the agent's internal state. |
