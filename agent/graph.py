@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 # LLM initialization
 # ---------------------------------------------------------------------------
 
-MODEL_NAME = os.getenv("AUTOSTREAM_MODEL", "gemini-2.0-flash-lite")
+MODEL_NAME = os.getenv("AUTOSTREAM_MODEL", "gemini-3.1-flash-lite-preview")
 
 llm: ChatGoogleGenerativeAI | None = None
 try:
