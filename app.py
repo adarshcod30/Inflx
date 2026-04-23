@@ -373,57 +373,33 @@ classification, optional RAG retrieval, optional lead-field extraction, a tool e
 and finally a grounded response generator — all sharing a single typed `AgentState` dict.
     """)
 
-    st.markdown("<div class='arch-title' style='margin-top:1.5rem;'>Pipeline Flow Diagram</div>", unsafe_allow_html=True)
+    st.markdown("<div class='arch-title' style='margin-top:1.5rem;'>Pipeline Flow Steps</div>", unsafe_allow_html=True)
     st.markdown("""
-<div style="background:#161b22;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:2rem;font-family:'Fira Code',monospace;font-size:0.82rem;line-height:1.8;overflow-x:auto;">
-<pre style="color:#f8fafc;margin:0;">
-<span style="color:#2563eb;">┌──────────────┐</span>
-<span style="color:#2563eb;">│</span> <b>User Message</b> <span style="color:#2563eb;">│</span>
-<span style="color:#2563eb;">└──────┬───────┘</span>
-       │
-       ▼
-<span style="color:#94a3b8;">┌──────────────┐</span>
-<span style="color:#94a3b8;">│</span>  input_node  <span style="color:#94a3b8;">│</span>  Preprocessing
-<span style="color:#94a3b8;">└──────┬───────┘</span>
-       │
-       ▼
-<span style="color:#2563eb;">┌──────────────┐</span>
-<span style="color:#2563eb;">│</span> intent_node  <span style="color:#2563eb;">│</span>  LLM + Rule-based Classifier
-<span style="color:#2563eb;">└──┬───┬───┬───┘</span>
-   │   │   │
-   │   │   └─── <span style="color:#10b981;">HIGH_INTENT</span> ──┐
-   │   │                       │
-   │   └─── <span style="color:#f59e0b;">PRODUCT_QUERY</span> ──┐ │
-   │                         │ │
-   │   <span style="color:#94a3b8;">GREETING</span>              ▼ ▼
-   │              <span style="color:#f59e0b;">┌──────────────┐</span>
-   │              <span style="color:#f59e0b;">│</span>   rag_node   <span style="color:#f59e0b;">│</span>  Knowledge Retriever
-   │              <span style="color:#f59e0b;">└──┬───────┬───┘</span>
-   │                 │       │
-   │    <span style="color:#f59e0b;">PRODUCT_QUERY</span>│  <span style="color:#10b981;">HIGH_INTENT</span>
-   │                 │       │
-   │                 │       ▼
-   │                 │  <span style="color:#10b981;">┌──────────────┐</span>
-   │                 │  <span style="color:#10b981;">│</span>  lead_node   <span style="color:#10b981;">│</span>  Field Extractor
-   │                 │  <span style="color:#10b981;">└──┬───────┬───┘</span>
-   │                 │     │       │
-   │                 │  <span style="color:#94a3b8;">Missing</span>  <span style="color:#10b981;">Qualified</span>
-   │                 │     │       │
-   │                 │     │       ▼
-   │                 │     │  <span style="color:#ef4444;">┌──────────────┐</span>
-   │                 │     │  <span style="color:#ef4444;">│</span>  tool_node   <span style="color:#ef4444;">│</span>  Lead Capture API
-   │                 │     │  <span style="color:#ef4444;">└──────┬───────┘</span>
-   │                 │     │         │
-   ▼                 ▼     ▼         ▼
-<span style="color:#2563eb;">┌──────────────────────────────────────┐</span>
-<span style="color:#2563eb;">│</span>          <b>respond_node</b>                <span style="color:#2563eb;">│</span>  Grounded Response Generator
-<span style="color:#2563eb;">└──────────────────┬───────────────────┘</span>
-                   │
-                   ▼
-            <span style="color:#2563eb;">┌─────────┐</span>
-            <span style="color:#2563eb;">│</span>   END   <span style="color:#2563eb;">│</span>
-            <span style="color:#2563eb;">└─────────┘</span>
-</pre>
+<div style='display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;'>
+    <div style='background:#1c2128; padding: 1rem 1.5rem; border-left: 4px solid #94a3b8; border-radius: 4px;'>
+        <strong style='color:#94a3b8; font-size: 1.1rem;'>1. input_node</strong><br/>
+        <span style='color:#cbd5e1; font-size: 0.95rem;'>Preprocesses the incoming user message (extensible for PII redaction/spam filtering).</span>
+    </div>
+    <div style='background:#1c2128; padding: 1rem 1.5rem; border-left: 4px solid #3b82f6; border-radius: 4px;'>
+        <strong style='color:#3b82f6; font-size: 1.1rem;'>2. intent_node</strong><br/>
+        <span style='color:#cbd5e1; font-size: 0.95rem;'>Classifies the message into <code>GREETING</code>, <code>PRODUCT_QUERY</code>, or <code>HIGH_INTENT</code> using the Gemini LLM & rule-based fallbacks.</span>
+    </div>
+    <div style='background:#1c2128; padding: 1rem 1.5rem; border-left: 4px solid #f59e0b; border-radius: 4px;'>
+        <strong style='color:#f59e0b; font-size: 1.1rem;'>3. rag_node</strong> <span style='color:#64748b; font-size: 0.85rem;'>(Conditional)</span><br/>
+        <span style='color:#cbd5e1; font-size: 0.95rem;'>If the intent is a product query or high intent, retrieves accurate context from the local JSON knowledge base to prevent hallucination.</span>
+    </div>
+    <div style='background:#1c2128; padding: 1rem 1.5rem; border-left: 4px solid #10b981; border-radius: 4px;'>
+        <strong style='color:#10b981; font-size: 1.1rem;'>4. lead_node</strong> <span style='color:#64748b; font-size: 0.85rem;'>(Conditional)</span><br/>
+        <span style='color:#cbd5e1; font-size: 0.95rem;'>If high intent is detected, progressively extracts lead fields (Name → Email → Platform) over multiple conversation turns.</span>
+    </div>
+    <div style='background:#1c2128; padding: 1rem 1.5rem; border-left: 4px solid #ef4444; border-radius: 4px;'>
+        <strong style='color:#ef4444; font-size: 1.1rem;'>5. tool_node</strong> <span style='color:#64748b; font-size: 0.85rem;'>(Conditional)</span><br/>
+        <span style='color:#cbd5e1; font-size: 0.95rem;'>Executes the mock CRM lead capture API. This strict gate only fires once all required fields are fully validated.</span>
+    </div>
+    <div style='background:#1c2128; padding: 1rem 1.5rem; border-left: 4px solid #3b82f6; border-radius: 4px;'>
+        <strong style='color:#3b82f6; font-size: 1.1rem;'>6. respond_node</strong><br/>
+        <span style='color:#cbd5e1; font-size: 0.95rem;'>Generates the final grounded response using the retrieved RAG context, or asks the user for the next missing lead field.</span>
+    </div>
 </div>
     """, unsafe_allow_html=True)
 
