@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import textwrap
+import time
 from langchain_core.messages import HumanMessage, AIMessage
 import dotenv
 from src.agent.graph import agent_app
@@ -11,146 +12,150 @@ dotenv.load_dotenv()
 
 # Page Configuration
 st.set_page_config(
-    page_title="AutoStream | AI Cognitive Sales Agent",
-    page_icon="🎬",
+    page_title="AutoStream Core | Agentic Intelligence",
+    page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# --- ADVANCED PREMIUM UI/UX ---
+# --- HYPER-ADVANCED AGENTIC UI/UX ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
     
     :root {
-        --primary: #6366f1;
-        --primary-glow: rgba(99, 102, 241, 0.5);
-        --bg-dark: #0f172a;
-        --card-bg: rgba(30, 41, 59, 0.7);
-        --text-main: #f8fafc;
-        --text-dim: #94a3b8;
+        --primary: #8b5cf6;
+        --secondary: #ec4899;
+        --accent: #06b6d4;
+        --bg-deep: #020617;
+        --panel-bg: rgba(15, 23, 42, 0.8);
+        --text-bright: #f8fafc;
+        --text-muted: #94a3b8;
+        --border-glow: rgba(139, 92, 246, 0.3);
     }
 
-    html, body, [class*="st-"] {
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        color: var(--text-main);
-    }
-
+    /* Global Body Overrides */
     .stApp {
-        background: radial-gradient(circle at 0% 0%, #1e1b4b 0%, #0f172a 100%);
+        background: radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%);
+        color: var(--text-bright);
+        font-family: 'Plus Jakarta Sans', sans-serif;
     }
 
-    /* Glassmorphism sidebar */
+    /* Sidebar - Cyberpunk Panel */
     [data-testid="stSidebar"] {
-        background-color: rgba(15, 23, 42, 0.95);
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(20px);
+        background-color: var(--bg-deep) !important;
+        border-right: 1px solid rgba(139, 92, 246, 0.2);
+        box-shadow: 10px 0 30px rgba(0,0,0,0.5);
     }
 
-    /* Chat Bubbles */
-    .stChatMessage {
-        background-color: var(--card-bg) !important;
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 20px !important;
-        padding: 1.5rem !important;
-        margin-bottom: 1.2rem !important;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    /* Titles & Headlines */
+    .agent-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 3.5rem;
+        font-weight: 700;
+        letter-spacing: -2px;
+        background: linear-gradient(135deg, #fff 0%, #8b5cf6 50%, #ec4899 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0px;
     }
 
-    /* Avatar Styling */
-    [data-testid="stChatMessageAvatarUser"] {
-        background: linear-gradient(135deg, #f472b6, #db2777) !important;
-    }
-    [data-testid="stChatMessageAvatarAssistant"] {
-        background: linear-gradient(135deg, #818cf8, #4f46e5) !important;
-    }
-
-    /* Premium Status Card */
-    .premium-card {
-        background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
-        border: 1px solid rgba(99, 102, 241, 0.3);
-        border-radius: 16px;
-        padding: 20px;
-        margin-bottom: 15px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    }
-
-    .label {
-        color: var(--text-dim);
-        font-size: 0.75rem;
+    .agent-status-tag {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.8rem;
+        color: var(--accent);
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 2px;
+        letter-spacing: 2px;
+        margin-bottom: 30px;
     }
 
-    .value {
-        color: var(--text-main);
-        font-size: 1rem;
-        font-weight: 700;
-        margin-bottom: 12px;
+    .pulse-dot {
+        width: 8px;
+        height: 8px;
+        background-color: var(--accent);
+        border-radius: 50%;
+        animation: pulse 2s infinite;
     }
 
-    .intent-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 9999px;
+    @keyframes pulse {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(6, 182, 212, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); }
+    }
+
+    /* Chat Container Customization */
+    .stChatMessage {
+        background: var(--panel-bg) !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-radius: 24px !important;
+        padding: 24px !important;
+        margin-bottom: 20px !important;
+        backdrop-filter: blur(12px);
+        transition: all 0.3s ease;
+    }
+
+    .stChatMessage:hover {
+        border-color: var(--border-glow) !important;
+        box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
+    }
+
+    /* Sidebar Widgets */
+    .sidebar-card {
+        background: rgba(30, 41, 59, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 24px;
+        margin-bottom: 20px;
+    }
+
+    .stat-label {
+        color: var(--text-muted);
         font-size: 0.7rem;
-        font-weight: 800;
+        font-weight: 700;
         text-transform: uppercase;
-        background: rgba(99, 102, 241, 0.2);
-        color: #818cf8;
-        border: 1px solid rgba(99, 102, 241, 0.4);
+        letter-spacing: 1.5px;
     }
 
-    /* Buttons */
-    .stButton > button {
-        width: 100%;
-        background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
-        border: none;
-        color: white;
-        padding: 0.6rem 1rem;
-        border-radius: 12px;
+    .stat-value {
+        color: #fff;
+        font-size: 1.1rem;
         font-weight: 700;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        margin-bottom: 16px;
+        font-family: 'Space Grotesk', sans-serif;
+    }
+
+    /* Custom Chat Input */
+    .stChatInputContainer {
+        border-top: 1px solid rgba(255,255,255,0.1) !important;
+        background: var(--bg-deep) !important;
+    }
+
+    /* Glowing Buttons */
+    .stButton > button {
+        background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%) !important;
+        border: none !important;
+        border-radius: 14px !important;
+        color: white !important;
+        font-weight: 700 !important;
+        padding: 12px 24px !important;
+        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3) !important;
     }
 
     .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 25px -5px var(--primary-glow);
-    }
-
-    /* Input area */
-    .stChatInputContainer {
-        padding-bottom: 2rem !important;
-    }
-
-    /* Header styling */
-    .main-title {
-        font-size: 3rem;
-        font-weight: 800;
-        background: linear-gradient(to right, #fff, #818cf8);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.5rem;
-    }
-    
-    .subtitle {
-        color: var(--text-dim);
-        font-size: 1.1rem;
-        margin-bottom: 2rem;
+        transform: scale(1.02) !important;
+        box-shadow: 0 4px 25px rgba(139, 92, 246, 0.5) !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- HEADER SECTION ---
-with st.container():
-    st.markdown('<h1 class="main-title">AutoStream</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="subtitle">Cognitive Social-to-Lead Agentic Workflow</p>', unsafe_allow_html=True)
-    st.caption("🚀 Powered by LangGraph & Gemini 3.1 Flash Lite | ServiceHive platform")
-    st.divider()
+# --- APP HEADER ---
+st.markdown('<h1 class="agent-title">AUTOREACH</h1>', unsafe_allow_html=True)
+st.markdown('<div class="agent-status-tag"><div class="pulse-dot"></div> Systems Online | Cognitive Agent Active</div>', unsafe_allow_html=True)
 
-# --- SESSION STATE ---
+# --- SESSION INITIALIZATION ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "lead_name" not in st.session_state:
@@ -164,41 +169,39 @@ if "intent" not in st.session_state:
 if "is_tool_called" not in st.session_state:
     st.session_state.is_tool_called = False
 
-# --- SIDEBAR: AGENT MONITORING ---
+# --- SIDEBAR: COGNITIVE OVERLAY ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/3669/3669911.png", width=60)
-    st.header("🧠 Agentic Memory")
-    st.markdown("Real-time monitoring of the agent's internal cognitive state.")
+    st.markdown("### 🧬 COGNITIVE OVERLAY")
+    st.caption("Monitoring real-time neural orchestrations.")
     
-    # Intent Visualization
-    st.subheader("Current Intent")
-    intent_display = st.session_state.intent.replace('_', ' ').title()
-    st.markdown(f'<div class="intent-badge">{intent_display}</div>', unsafe_allow_html=True)
+    # Internal State Card
+    st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
+    st.markdown(f'<div class="stat-label">Active Intent</div><div class="stat-value">{st.session_state.intent.upper().replace("_", " ")}</div>', unsafe_allow_html=True)
     
-    st.divider()
+    # Reasoning Visualization (Simulated for UX)
+    st.markdown('<div class="stat-label">Neural Capacity</div>', unsafe_allow_html=True)
+    st.progress(0.85)
+    st.markdown('</div>', unsafe_allow_html=True)
     
-    # Lead Profile (Slot Filling Monitor)
-    st.subheader("Lead Profile")
-    
-    # Use clean HTML to avoid code-block rendering issues
+    # Lead Profile (Entity Extraction Monitor)
+    st.markdown("### 👤 SUBJECT PROFILE")
     profile_html = f"""
-    <div class="premium-card">
-        <div class="label">Full Name</div>
-        <div class="value">{st.session_state.lead_name or '---'}</div>
-        <div class="label">Email Address</div>
-        <div class="value">{st.session_state.lead_email or '---'}</div>
-        <div class="label">Primary Platform</div>
-        <div class="value">{st.session_state.lead_platform or '---'}</div>
+    <div class="sidebar-card">
+        <div class="stat-label">Identified Name</div>
+        <div class="stat-value">{st.session_state.lead_name or "---"}</div>
+        <div class="stat-label">Verified Email</div>
+        <div class="stat-value">{st.session_state.lead_email or "---"}</div>
+        <div class="stat-label">Target Platform</div>
+        <div class="stat-value">{st.session_state.lead_platform or "---"}</div>
     </div>
     """
-    st.markdown(textwrap.dedent(profile_html), unsafe_allow_html=True)
+    st.markdown(profile_html, unsafe_allow_html=True)
     
-    # Status Toggles
     if st.session_state.is_tool_called:
-        st.success("🎯 CRM Sync Successful")
-    
+        st.info("🎯 TARGET DATA SYNCHRONIZED")
+        
     st.divider()
-    if st.button("Reset Session"):
+    if st.button("TERMINATE SESSION"):
         st.session_state.messages = []
         st.session_state.lead_name = None
         st.session_state.lead_email = None
@@ -207,60 +210,63 @@ with st.sidebar:
         st.session_state.is_tool_called = False
         st.rerun()
 
-# --- CHAT INTERFACE ---
-chat_area = st.container()
+# --- INTERACTION LAYER ---
+chat_container = st.container()
 
-with chat_area:
+with chat_container:
     for message in st.session_state.messages:
         role = "user" if isinstance(message, HumanMessage) else "assistant"
         with st.chat_message(role):
             st.markdown(message.content)
 
-# --- INPUT HANDLING ---
-if prompt := st.chat_input("Ask anything about video editing or AutoStream..."):
-    # Append User Message
+# --- NEURAL INPUT ---
+if prompt := st.chat_input("Initiate interaction..."):
+    # User Input
     st.session_state.messages.append(HumanMessage(content=prompt))
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Invoke Agent Logic
+    # Agent Processing
     with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            try:
-                # Prepare current state for the graph
-                current_state: AgentState = {
-                    "messages": st.session_state.messages,
-                    "intent": st.session_state.intent,
-                    "lead_name": st.session_state.lead_name,
-                    "lead_email": st.session_state.lead_email,
-                    "lead_platform": st.session_state.lead_platform,
-                    "is_tool_called": st.session_state.is_tool_called
-                }
+        thinking_placeholder = st.empty()
+        thinking_placeholder.markdown("*Synthesizing response...*")
+        
+        try:
+            # Graph Invocation
+            current_state: AgentState = {
+                "messages": st.session_state.messages,
+                "intent": st.session_state.intent,
+                "lead_name": st.session_state.lead_name,
+                "lead_email": st.session_state.lead_email,
+                "lead_platform": st.session_state.lead_platform,
+                "is_tool_called": st.session_state.is_tool_called
+            }
+            
+            final_state = agent_app.invoke(current_state)
+            
+            # Sync State
+            st.session_state.intent = final_state.get("intent", "N/A")
+            st.session_state.lead_name = final_state.get("lead_name")
+            st.session_state.lead_email = final_state.get("lead_email")
+            st.session_state.lead_platform = final_state.get("lead_platform")
+            st.session_state.is_tool_called = final_state.get("is_tool_called", False)
+            
+            # Display Output
+            ai_response = final_state["messages"][-1].content
+            st.session_state.messages.append(AIMessage(content=ai_response))
+            
+            thinking_placeholder.empty()
+            st.markdown(ai_response)
+            
+            if st.session_state.is_tool_called:
+                st.toast("Protocol Complete: Lead Data Captured.", icon="🎯")
+                time.sleep(0.5)
+                st.rerun()
                 
-                # Execute the LangGraph workflow
-                final_state = agent_app.invoke(current_state)
-                
-                # Synchronize application state with graph output
-                st.session_state.intent = final_state.get("intent", "N/A")
-                st.session_state.lead_name = final_state.get("lead_name")
-                st.session_state.lead_email = final_state.get("lead_email")
-                st.session_state.lead_platform = final_state.get("lead_platform")
-                st.session_state.is_tool_called = final_state.get("is_tool_called", False)
-                
-                # Display the AI's response
-                ai_response = final_state["messages"][-1].content
-                st.session_state.messages.append(AIMessage(content=ai_response))
-                st.markdown(ai_response)
-                
-                # Feedback toast for successful tool calls
-                if st.session_state.is_tool_called:
-                    st.toast("Success: Lead data captured and synchronized with CRM!", icon="🚀")
-                    st.rerun() # Refresh to update the UI badges
-                    
-            except Exception as e:
-                st.error(f"Agent Error: {str(e)}")
-                st.info("Check your GOOGLE_API_KEY and connection.")
+        except Exception as e:
+            thinking_placeholder.empty()
+            st.error(f"NEURAL DISRUPTION: {str(e)}")
 
 # Footer
-st.markdown("---")
-st.markdown("<div style='text-align: center; color: #64748b; font-size: 0.8rem;'>Built with Advanced Agentic Orchestration for AutoStream</div>", unsafe_allow_html=True)
+st.markdown("<br><br>", unsafe_allow_html=True)
+st.markdown("<div style='text-align: center; color: var(--text-muted); font-size: 0.7rem; letter-spacing: 3px;'>CORE ORCHESTRATION ENGINE v2.5.0</div>", unsafe_allow_html=True)
