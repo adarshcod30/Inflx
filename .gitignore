@@ -1,15 +1,41 @@
+# Virtual environments
 .venv/
-.venv-autostream/
 venv/
+venv_*/
+env/
+
+# Python bytecode
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Environment secrets
 .env
+
+# IDE and OS
 .DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Build artifacts
 dist/
 build/
 *.egg-info/
-.ipynb_checkpoints/
+
+# Streamlit
 .streamlit/config.toml
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+logs/
