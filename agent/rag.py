@@ -161,7 +161,7 @@ def retrieve_knowledge(query: str, top_k: int = 3) -> str:
     """Return relevant knowledge base content for the given query.
 
     Uses keyword overlap scoring to rank chunks by relevance.
-    Returns the top-K matching chunks concatenated as context.
+    Short queries are enriched with synonyms for better matching.
 
     Args:
         query: The user's natural-language question.
@@ -173,16 +173,43 @@ def retrieve_knowledge(query: str, top_k: int = 3) -> str:
     """
     _ensure_loaded()
 
-    query_tokens = set(re.findall(r"\w+", query.lower()))
-    if not query_tokens:
+    # --- Query enrichment: expand short queries with related terms ---
+    _SYNONYMS = {
+        "features": ["feature", "resolution", "captions", "branding", "collaboration", "export", "storage", "video", "support", "4k", "720p"],
+        "pricing": ["price", "plan", "cost", "month", "29", "79", "basic", "pro"],
+        "plans": ["plan", "basic", "pro", "price", "pricing", "cost", "29", "79", "month"],
+        "policies": ["policy", "refund", "support", "cancellation", "cancel"],
+        "refund": ["refund", "money", "back", "7", "days", "policy"],
+        "support": ["support", "email", "chat", "priority", "24", "hours", "response"],
+        "cancellation": ["cancel", "cancellation", "policy", "billing", "cycle"],
+        "pro": ["pro", "plan", "79", "unlimited", "4k", "captions", "branding", "collaboration"],
+        "basic": ["basic", "plan", "29", "720p", "10", "videos"],
+        "trial": ["trial", "free", "7", "day", "credit"],
+        "upgrade": ["upgrade", "basic", "pro", "prorated", "credit"],
+    }
+
+    enriched_query = query.lower()
+    query_words = set(re.findall(r"\w+", enriched_query))
+
+    # Expand short queries with synonyms
+    if len(query_words) <= 3:
+        extra_tokens = set()
+        for word in list(query_words):
+            if word in _SYNONYMS:
+                extra_tokens.update(_SYNONYMS[word])
+        query_words = query_words | extra_tokens
+
+    if not query_words:
         return "No relevant information found in the knowledge base."
 
     scored: list[tuple[float, dict[str, str]]] = []
     for chunk in _chunks:
         chunk_text = (chunk["title"] + " " + chunk["content"]).lower()
         chunk_tokens = set(re.findall(r"\w+", chunk_text))
-        overlap = len(query_tokens & chunk_tokens)
-        score = overlap / len(query_tokens)
+        overlap = len(query_words & chunk_tokens)
+        # Use raw overlap count for ranking (not normalised by query size)
+        # This prevents single-word queries from always scoring 1.0 on every chunk
+        score = overlap
         scored.append((score, chunk))
 
     scored.sort(key=lambda x: x[0], reverse=True)

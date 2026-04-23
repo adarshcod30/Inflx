@@ -139,6 +139,27 @@ def intent_node(state: AgentState) -> dict:
     if state.get("is_tool_called"):
         return {"intent": "PRODUCT_QUERY"}
 
+    # --- Context-aware upgrade: if previous AI message invited signup,
+    #     and user gives a short affirmative/name, treat as HIGH_INTENT ---
+    if len(messages) >= 2:
+        prev_ai = messages[-2]
+        if isinstance(prev_ai, AIMessage):
+            prev_text = prev_ai.content.lower()
+            signup_phrases = [
+                "shall we begin", "sign-up process", "get you started",
+                "full name", "like to sign up", "ready to get started",
+                "start the sign-up", "begin with your", "would you like to subscribe",
+                "interested in signing up", "like to proceed",
+            ]
+            user_lower = last_msg.strip().lower()
+            if any(phrase in prev_text for phrase in signup_phrases):
+                # Short affirmative or name-like response → HIGH_INTENT
+                if len(user_lower.split()) <= 5 or user_lower in [
+                    "yes", "sure", "okay", "ok", "yeah", "yep", "let's go",
+                    "yes please", "yes i do", "go ahead",
+                ]:
+                    return {"intent": "HIGH_INTENT", "conversation_stage": "lead_collect"}
+
     # Build recent conversation context for better classification
     recent_context = ""
     if len(messages) > 1:
@@ -403,12 +424,14 @@ CONVERSATION HISTORY:
 CURRENT INTENT: {intent}
 
 INSTRUCTIONS:
-1. Answer the user's question using ONLY the Knowledge Base Context above.
-2. If the context does not contain the answer, say "I don't have that specific information, but I can tell you about our plans, pricing, and policies."
-3. NEVER invent pricing, features, or policy details.
-4. Always mention BOTH the Basic Plan ($29/mo) and Pro Plan ($79/mo) when discussing pricing.
-5. Be professional, friendly, and structured. Use bullet points for lists.
-6. Keep the response concise (under 3 paragraphs).
+1. The Knowledge Base Context above contains the answer. Use it to respond.
+2. Present the information clearly with bullet points and bold formatting.
+3. NEVER say "I don't have that information" — the context IS the answer.
+4. When discussing pricing, mention BOTH Basic Plan ($29/mo) AND Pro Plan ($79/mo).
+5. Do NOT ask for the user's name, email, or other personal information.
+   Your role is to answer product questions only. Lead collection is handled separately.
+6. Keep the response concise (under 3 paragraphs) and end with a follow-up question.
+7. If the user asks about a specific plan, give its full details.
 
 Response:"""
             response = llm.invoke(prompt)
