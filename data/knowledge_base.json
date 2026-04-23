@@ -1,0 +1,80 @@
+{
+  "product": {
+    "name": "AutoStream",
+    "tagline": "AI-Powered Video Automation for Content Creators",
+    "description": "AutoStream is a world-class SaaS platform that provides automated video editing tools for content creators. It helps creators produce social-ready videos faster with AI-powered editing, captioning, and formatting.",
+    "website": "https://autostream.io"
+  },
+  "plans": [
+    {
+      "name": "Basic Plan",
+      "price": "$29/month",
+      "video_limit": "10 videos per month",
+      "max_resolution": "720p",
+      "support": "Email support (business hours only, Mon-Fri 9AM-6PM EST)",
+      "export_formats": ["MP4", "MOV"],
+      "storage": "10 GB cloud storage",
+      "ai_captions": false,
+      "custom_branding": false,
+      "team_collaboration": false
+    },
+    {
+      "name": "Pro Plan",
+      "price": "$79/month",
+      "video_limit": "Unlimited videos",
+      "max_resolution": "4K",
+      "support": "24/7 priority support (live chat + email, under 2 hour response)",
+      "export_formats": ["MP4", "MOV", "WebM", "GIF"],
+      "storage": "Unlimited cloud storage",
+      "ai_captions": true,
+      "ai_captions_detail": "Auto-generated, multi-language AI captions included",
+      "custom_branding": true,
+      "team_collaboration": true,
+      "team_seats": 5
+    }
+  ],
+  "policies": {
+    "refund": {
+      "title": "Refund Policy",
+      "details": [
+        "Full refund available within the first 7 days of subscription.",
+        "No refunds are issued after 7 days from the date of purchase.",
+        "Refund requests must be submitted via the support portal."
+      ]
+    },
+    "support": {
+      "title": "Support Policy",
+      "details": [
+        "Basic Plan users receive email support during business hours (Mon-Fri, 9 AM - 6 PM EST).",
+        "Pro Plan users receive 24/7 live chat and priority email support.",
+        "Average response time: Basic (24 hours), Pro (under 2 hours)."
+      ]
+    },
+    "cancellation": {
+      "title": "Cancellation Policy",
+      "details": [
+        "Users can cancel their subscription at any time from the account settings.",
+        "Access continues until the end of the current billing cycle.",
+        "No cancellation fees apply."
+      ]
+    }
+  },
+  "faq": [
+    {
+      "question": "Can I upgrade from Basic to Pro mid-cycle?",
+      "answer": "Yes. When you upgrade, the remaining days on your Basic plan are prorated and applied as credit toward your Pro subscription."
+    },
+    {
+      "question": "What platforms does AutoStream support?",
+      "answer": "AutoStream supports direct publishing to YouTube, Instagram, TikTok, Twitter/X, and Facebook. You can also download edited videos locally."
+    },
+    {
+      "question": "Is there a free trial?",
+      "answer": "AutoStream offers a 7-day free trial of the Pro plan for new users. No credit card required to start."
+    },
+    {
+      "question": "Do you offer team or enterprise plans?",
+      "answer": "The Pro plan includes team collaboration for up to 5 seats. For larger teams or custom enterprise needs, contact sales@autostream.io."
+    }
+  ]
+}

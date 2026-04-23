@@ -1,41 +1,113 @@
 """RAG retrieval module — loads and searches the local knowledge base.
 
-The retriever reads `data/knowledge_base.md` at import time and provides
-a `retrieve_knowledge()` function that performs keyword-based semantic
-matching to find the most relevant sections for a user query.
+Architecture:
+  1. Loads ``data/knowledge_base.json`` at first access (lazy singleton).
+  2. Flattens the JSON into titled *chunks* — one per plan, policy, and FAQ entry.
+  3. At query time, performs **keyword-overlap scoring** to rank chunks.
+  4. Returns the top-K most relevant chunks concatenated as grounding context.
+
+Design rationale:
+  - A lightweight keyword retriever avoids external vector-DB dependencies
+    while still delivering accurate results for a bounded knowledge domain.
+  - The chunking strategy mirrors how a production system would split documents
+    before embedding, making migration to a vector store straightforward.
+
+Also maintains the original Markdown knowledge base for backwards compatibility.
 """
 
-import os
+from __future__ import annotations
+
+import json
+import logging
 import re
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
 
-_KB_PATH = Path(__file__).resolve().parent.parent / "data" / "knowledge_base.md"
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
 
-_knowledge_sections: list[dict[str, str]] = []
+_BASE_DIR = Path(__file__).resolve().parent.parent
+_KB_JSON_PATH = _BASE_DIR / "data" / "knowledge_base.json"
+_KB_MD_PATH = _BASE_DIR / "data" / "knowledge_base.md"
+
+# ---------------------------------------------------------------------------
+# Chunk storage (lazy-loaded singleton)
+# ---------------------------------------------------------------------------
+
+_chunks: list[dict[str, str]] = []  # [{"title": …, "content": …}, …]
 
 
-def _load_knowledge_base() -> list[dict[str, str]]:
-    """Parse the Markdown knowledge base into titled sections.
+def _flatten_json_kb(data: dict) -> list[dict[str, str]]:
+    """Convert structured JSON knowledge base into flat titled chunks.
 
-    Groups h2-level parent sections with all their h3-level children
-    so that a query like 'pricing plans' returns the full pricing block
-    including Basic and Pro plan details.
+    Each chunk has a ``title`` and a ``content`` string that can be
+    matched against a user query and injected into the LLM prompt.
     """
-    if not _KB_PATH.exists():
-        raise FileNotFoundError(f"Knowledge base not found at {_KB_PATH}")
+    chunks: list[dict[str, str]] = []
 
-    raw = _KB_PATH.read_text(encoding="utf-8")
+    # Product overview
+    if "product" in data:
+        p = data["product"]
+        chunks.append({
+            "title": "Product Overview",
+            "content": (
+                f"{p.get('name', 'AutoStream')} — {p.get('tagline', '')}\n"
+                f"{p.get('description', '')}"
+            ),
+        })
 
-    # First pass: group by h2 sections (## headings)
-    h2_sections: list[dict[str, str]] = []
+    # Plans
+    for plan in data.get("plans", []):
+        lines = [f"**{plan['name']}** — {plan['price']}"]
+        lines.append(f"- Video Limit: {plan.get('video_limit', 'N/A')}")
+        lines.append(f"- Max Resolution: {plan.get('max_resolution', 'N/A')}")
+        lines.append(f"- Support: {plan.get('support', 'N/A')}")
+        lines.append(f"- Export Formats: {', '.join(plan.get('export_formats', []))}")
+        lines.append(f"- Storage: {plan.get('storage', 'N/A')}")
+        if plan.get("ai_captions"):
+            lines.append(f"- AI Captions: {plan.get('ai_captions_detail', 'Included')}")
+        if plan.get("custom_branding"):
+            lines.append("- Custom Branding: Included")
+        if plan.get("team_collaboration"):
+            lines.append(f"- Team Collaboration: Up to {plan.get('team_seats', 'N/A')} seats")
+        chunks.append({
+            "title": f"Pricing — {plan['name']}",
+            "content": "\n".join(lines),
+        })
+
+    # Policies
+    for key, policy in data.get("policies", {}).items():
+        chunks.append({
+            "title": policy.get("title", key.title()),
+            "content": "\n".join(f"- {d}" for d in policy.get("details", [])),
+        })
+
+    # FAQs
+    for faq in data.get("faq", []):
+        chunks.append({
+            "title": f"FAQ — {faq['question']}",
+            "content": faq["answer"],
+        })
+
+    return chunks
+
+
+def _load_md_kb() -> list[dict[str, str]]:
+    """Fallback: parse the Markdown knowledge base into titled sections."""
+    if not _KB_MD_PATH.exists():
+        return []
+
+    raw = _KB_MD_PATH.read_text(encoding="utf-8")
+    sections: list[dict[str, str]] = []
     current_title = "General"
     current_body: list[str] = []
 
     for line in raw.splitlines():
         if line.startswith("## ") and not line.startswith("### "):
             if current_body:
-                h2_sections.append({
+                sections.append({
                     "title": current_title,
                     "content": "\n".join(current_body).strip(),
                 })
@@ -45,84 +117,80 @@ def _load_knowledge_base() -> list[dict[str, str]]:
             current_body.append(line)
 
     if current_body:
-        h2_sections.append({
+        sections.append({
             "title": current_title,
             "content": "\n".join(current_body).strip(),
         })
 
-    # Second pass: also create h3-level sections for granular matching
-    h3_sections: list[dict[str, str]] = []
-    current_h2 = "General"
-    current_h3 = None
-    h3_body: list[str] = []
+    return sections
 
-    for line in raw.splitlines():
-        if line.startswith("## ") and not line.startswith("### "):
-            if current_h3 and h3_body:
-                h3_sections.append({
-                    "title": f"{current_h2} > {current_h3}",
-                    "content": "\n".join(h3_body).strip(),
-                })
-            current_h2 = line.lstrip("#").strip()
-            current_h3 = None
-            h3_body = []
-        elif line.startswith("### "):
-            if current_h3 and h3_body:
-                h3_sections.append({
-                    "title": f"{current_h2} > {current_h3}",
-                    "content": "\n".join(h3_body).strip(),
-                })
-            current_h3 = line.lstrip("#").strip()
-            h3_body = []
-        else:
-            h3_body.append(line)
 
-    if current_h3 and h3_body:
-        h3_sections.append({
-            "title": f"{current_h2} > {current_h3}",
-            "content": "\n".join(h3_body).strip(),
-        })
+def _load_knowledge_base() -> list[dict[str, str]]:
+    """Load knowledge base — prefer JSON, fall back to Markdown."""
+    if _KB_JSON_PATH.exists():
+        try:
+            data = json.loads(_KB_JSON_PATH.read_text(encoding="utf-8"))
+            chunks = _flatten_json_kb(data)
+            logger.info("Loaded %d chunks from JSON knowledge base", len(chunks))
+            return chunks
+        except Exception as exc:
+            logger.warning("JSON KB load failed (%s), falling back to Markdown", exc)
 
-    # Combine both levels: h2 (broad) + h3 (granular)
-    return h2_sections + h3_sections
+    md_chunks = _load_md_kb()
+    if md_chunks:
+        logger.info("Loaded %d sections from Markdown knowledge base", len(md_chunks))
+        return md_chunks
+
+    raise FileNotFoundError(
+        f"No knowledge base found at {_KB_JSON_PATH} or {_KB_MD_PATH}"
+    )
 
 
 def _ensure_loaded() -> None:
     """Lazy-load knowledge base on first access."""
-    global _knowledge_sections
-    if not _knowledge_sections:
-        _knowledge_sections = _load_knowledge_base()
+    global _chunks
+    if not _chunks:
+        _chunks = _load_knowledge_base()
 
 
-def retrieve_knowledge(query: str) -> str:
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+def retrieve_knowledge(query: str, top_k: int = 3) -> str:
     """Return relevant knowledge base content for the given query.
 
-    Uses keyword overlap scoring to rank sections by relevance.
-    Returns the top-3 matching sections concatenated as context.
+    Uses keyword overlap scoring to rank chunks by relevance.
+    Returns the top-K matching chunks concatenated as context.
+
+    Args:
+        query: The user's natural-language question.
+        top_k: Number of top-scoring chunks to return.
+
+    Returns:
+        A formatted string of the most relevant knowledge chunks,
+        or a "not found" message if no chunk scores above zero.
     """
     _ensure_loaded()
 
     query_tokens = set(re.findall(r"\w+", query.lower()))
+    if not query_tokens:
+        return "No relevant information found in the knowledge base."
 
-    scored: list[tuple[float, dict]] = []
-    for section in _knowledge_sections:
-        section_text = (section["title"] + " " + section["content"]).lower()
-        section_tokens = set(re.findall(r"\w+", section_text))
-
-        if not query_tokens:
-            continue
-
-        overlap = len(query_tokens & section_tokens)
+    scored: list[tuple[float, dict[str, str]]] = []
+    for chunk in _chunks:
+        chunk_text = (chunk["title"] + " " + chunk["content"]).lower()
+        chunk_tokens = set(re.findall(r"\w+", chunk_text))
+        overlap = len(query_tokens & chunk_tokens)
         score = overlap / len(query_tokens)
-        scored.append((score, section))
+        scored.append((score, chunk))
 
     scored.sort(key=lambda x: x[0], reverse=True)
 
-    top_sections = scored[:3]
     results: list[str] = []
-    for score, section in top_sections:
+    for score, chunk in scored[:top_k]:
         if score > 0:
-            results.append(f"### {section['title']}\n{section['content']}")
+            results.append(f"### {chunk['title']}\n{chunk['content']}")
 
     if not results:
         return "No relevant information found in the knowledge base."
@@ -133,5 +201,5 @@ def retrieve_knowledge(query: str) -> str:
 def get_full_knowledge_base() -> str:
     """Return the entire knowledge base as a single string."""
     _ensure_loaded()
-    parts = [f"### {s['title']}\n{s['content']}" for s in _knowledge_sections]
+    parts = [f"### {c['title']}\n{c['content']}" for c in _chunks]
     return "\n\n".join(parts)

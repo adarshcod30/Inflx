@@ -8,7 +8,7 @@ langchain-core>=0.3.0,<1.0.0
 langgraph>=0.2.0,<1.0.0
 langchain-google-genai>=2.0.0,<5.0.0
 
-# Google GenAI SDK (new unified SDK, replaces deprecated google-generativeai)
+# Google GenAI SDK
 google-genai>=1.0.0
 
 # Web UI
@@ -19,6 +19,9 @@ python-dotenv>=1.0.0,<2.0.0
 
 # Data Validation
 pydantic>=2.0.0,<3.0.0
+
+# Data Display (Dashboard)
+pandas>=2.0.0
 
 # Testing
 pytest>=8.0.0,<9.0.0
